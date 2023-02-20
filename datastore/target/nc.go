@@ -3,6 +3,7 @@ package target
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/beevik/etree"
@@ -58,6 +59,7 @@ func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sche
 		xmlc.Add(u.Path, u.Value)
 	}
 	_ = xmlc
+
 	return nil, nil
 }
 
@@ -102,9 +104,41 @@ func (x *XMLConfig) Add(p *schemapb.Path, v *schemapb.TypedValue) error {
 		elem = nextElem
 	}
 
-	elem.CreateText(v.GetStringVal())
+	value, err := valueAsString(v)
+	if err != nil {
+		return err
+	}
+	elem.CreateText(value)
 
 	return nil
+}
+
+func valueAsString(v *schemapb.TypedValue) (string, error) {
+
+	switch v.Value.(type) {
+	case *schemapb.TypedValue_StringVal:
+		return v.GetStringVal(), nil
+	case *schemapb.TypedValue_IntVal:
+		return fmt.Sprintf("%d", v.GetIntVal()), nil
+	case *schemapb.TypedValue_UintVal:
+		return fmt.Sprintf("%d", v.GetUintVal()), nil
+	case *schemapb.TypedValue_BoolVal:
+		return string(strconv.FormatBool(v.GetBoolVal())), nil
+	case *schemapb.TypedValue_BytesVal:
+		return string(v.GetBytesVal()), nil
+	case *schemapb.TypedValue_FloatVal:
+		return string(strconv.FormatFloat(float64(v.GetFloatVal()), 'b', -1, 32)), nil
+	case *schemapb.TypedValue_DecimalVal:
+		return fmt.Sprintf("%d", v.GetDecimalVal().Digits), nil
+	case *schemapb.TypedValue_AsciiVal:
+		return v.GetAsciiVal(), nil
+	case *schemapb.TypedValue_LeaflistVal:
+	case *schemapb.TypedValue_AnyVal:
+	case *schemapb.TypedValue_JsonVal:
+	case *schemapb.TypedValue_JsonIetfVal:
+	case *schemapb.TypedValue_ProtoBytes:
+	}
+	return "", fmt.Errorf("TypedValue to String failed")
 }
 
 func pathElem2Xpath(pe *schemapb.PathElem) (etree.Path, error) {

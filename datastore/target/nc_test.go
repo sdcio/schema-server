@@ -62,7 +62,7 @@ func TestXMLConfig_Add(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "One",
+			name: "String value",
 			fields: fields{
 				doc: etree.NewDocument(),
 			},
@@ -90,6 +90,39 @@ func TestXMLConfig_Add(t *testing.T) {
 				v: &schemapb.TypedValue{
 					Value: &schemapb.TypedValue_StringVal{
 						StringVal: "MyDesciption",
+					},
+				},
+			},
+		},
+		{
+			name: "Int value",
+			fields: fields{
+				doc: etree.NewDocument(),
+			},
+			wantErr: false,
+			args: args{
+				p: &schemapb.Path{
+					Elem: []*schemapb.PathElem{
+						{
+							Name: "interface",
+							Key: map[string]string{
+								"name": "eth0",
+							},
+						},
+						{
+							Name: "subinterface",
+							Key: map[string]string{
+								"id": "0",
+							},
+						},
+						{
+							Name: "description",
+						},
+					},
+				},
+				v: &schemapb.TypedValue{
+					Value: &schemapb.TypedValue_IntVal{
+						IntVal: 35,
 					},
 				},
 			},
