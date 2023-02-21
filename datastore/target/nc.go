@@ -16,16 +16,20 @@ import (
 )
 
 type ncTarget struct {
-	driver *netconf.Driver
+	driver       *netconf.Driver
+	schemaClient schemapb.SchemaServerClient
+	schema       *schemapb.Schema
+	sbi          *config.SBI
 }
 
-func newNCTarget(ctx context.Context, cfg *config.SBI) (*ncTarget, error) {
+func newNCTarget(ctx context.Context, cfg *config.SBI, schemaClient schemapb.SchemaServerClient, schema *schemapb.Schema) (*ncTarget, error) {
 	var opts []util.Option
 
 	if cfg.Credentials != nil {
 		opts = append(opts,
 			options.WithAuthUsername(cfg.Credentials.Username),
 			options.WithAuthPassword(cfg.Credentials.Password),
+			options.WithTransportType("standard"),
 		)
 	}
 
@@ -45,7 +49,11 @@ func newNCTarget(ctx context.Context, cfg *config.SBI) (*ncTarget, error) {
 		return nil, err
 	}
 
-	return &ncTarget{}, nil
+	return &ncTarget{
+		driver:       d,
+		schemaClient: schemaClient,
+		sbi:          cfg,
+	}, nil
 }
 
 func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*schemapb.GetDataResponse, error) {
@@ -53,10 +61,10 @@ func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*sche
 }
 func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*schemapb.SetDataResponse, error) {
 
-	xmlc := NewXMLConfig()
+	xmlc := NewXMLConfigBuilder(t.schemaClient, t.schema)
 
 	for _, u := range req.Update {
-		xmlc.Add(u.Path, u.Value)
+		xmlc.Add(ctx, u.Path, u.Value)
 	}
 	_ = xmlc
 
@@ -65,25 +73,49 @@ func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sche
 
 func (t *ncTarget) Subscribe() {}
 func (t *ncTarget) Sync(ctx context.Context, syncCh chan *schemapb.Notification) {
+	log.Infof("starting target %s sync", t.sbi.Address)
+	log.Infof("sync still is a NOOP on netconf targets")
 	<-ctx.Done()
 	log.Infof("sync stopped: %v", ctx.Err())
 }
 
 func (t *ncTarget) Close() {}
 
-type XMLConfig struct {
-	doc *etree.Document
+type XMLConfigBuilder struct {
+	doc          *etree.Document
+	schemaClient schemapb.SchemaServerClient
+	schema       *schemapb.Schema
 }
 
-func NewXMLConfig() *XMLConfig {
-	return &XMLConfig{
-		doc: etree.NewDocument(),
+func NewXMLConfigBuilder(ssc schemapb.SchemaServerClient, schema *schemapb.Schema) *XMLConfigBuilder {
+	return &XMLConfigBuilder{
+		doc:          etree.NewDocument(),
+		schemaClient: ssc,
+		schema:       schema,
 	}
 }
 
-func (x *XMLConfig) Add(p *schemapb.Path, v *schemapb.TypedValue) error {
+func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemapb.TypedValue) error {
 	elem := &x.doc.Element
-	for _, pe := range p.Elem {
+
+	for peIdx, pe := range p.Elem {
+
+		// Perform schema queries
+		sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
+			Path: &schemapb.Path{
+				Elem:   p.Elem[:peIdx],
+				Origin: p.Origin,
+				Target: p.Target,
+			},
+			Schema: x.schema,
+		})
+		if err != nil {
+			return err
+		}
+		// deduce namespace from SchemaRequest
+		namespace := getNamespaceFromGetSchemaResponse(sr)
+		_ = namespace
+
 		// generate an xpath from the path element
 		// this is to find the next level xml element
 		path, err := pathElem2Xpath(pe)
@@ -111,6 +143,18 @@ func (x *XMLConfig) Add(p *schemapb.Path, v *schemapb.TypedValue) error {
 	elem.CreateText(value)
 
 	return nil
+}
+
+func getNamespaceFromGetSchemaResponse(sr *schemapb.GetSchemaResponse) (namespace string) {
+	switch sr.Schema.(type) {
+	case *schemapb.GetSchemaResponse_Container:
+		namespace = sr.GetContainer().Namespace
+	case *schemapb.GetSchemaResponse_Field:
+		namespace = sr.GetField().Namespace
+	case *schemapb.GetSchemaResponse_Leaflist:
+		namespace = sr.GetLeaflist().Namespace
+	}
+	return namespace
 }
 
 func valueAsString(v *schemapb.TypedValue) (string, error) {
