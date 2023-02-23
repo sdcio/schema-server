@@ -53,6 +53,7 @@ func newNCTarget(ctx context.Context, cfg *config.SBI, schemaClient schemapb.Sch
 		driver:       d,
 		schemaClient: schemaClient,
 		sbi:          cfg,
+		schema:       schema,
 	}, nil
 }
 
@@ -66,7 +67,16 @@ func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sche
 	for _, u := range req.Update {
 		xmlc.Add(ctx, u.Path, u.Value)
 	}
-	_ = xmlc
+
+	for _, d := range req.Delete {
+		xmlc.Delete(ctx, d)
+	}
+
+	xdoc, err := xmlc.GetDoc()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(xdoc)
 
 	return nil, nil
 }
@@ -79,12 +89,15 @@ func (t *ncTarget) Sync(ctx context.Context, syncCh chan *schemapb.Notification)
 	log.Infof("sync stopped: %v", ctx.Err())
 }
 
-func (t *ncTarget) Close() {}
+func (t *ncTarget) Close() {
+	t.driver.Close()
+}
 
 type XMLConfigBuilder struct {
 	doc          *etree.Document
 	schemaClient schemapb.SchemaServerClient
 	schema       *schemapb.Schema
+	//namespaces   *NamespaceIndex
 }
 
 func NewXMLConfigBuilder(ssc schemapb.SchemaServerClient, schema *schemapb.Schema) *XMLConfigBuilder {
@@ -92,48 +105,83 @@ func NewXMLConfigBuilder(ssc schemapb.SchemaServerClient, schema *schemapb.Schem
 		doc:          etree.NewDocument(),
 		schemaClient: ssc,
 		schema:       schema,
+		//namespaces:   NewNamespaceIndex(),
 	}
 }
 
-func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemapb.TypedValue) error {
+func (x *XMLConfigBuilder) GetDoc() (string, error) {
+	//x.addNamespaceDefs()
+	x.doc.Indent(2)
+	xdoc, err := x.doc.WriteToString()
+	if err != nil {
+		return "", err
+	}
+	return xdoc, nil
+}
+
+func (x *XMLConfigBuilder) Delete(ctx context.Context, p *schemapb.Path) error {
+
+	elem, err := x.forward(ctx, p)
+	if err != nil {
+		return err
+	}
+	// add the delete operation
+	elem.CreateAttr("operation", "delete")
+
+	return nil
+}
+
+func (x *XMLConfigBuilder) forward(ctx context.Context, p *schemapb.Path) (*etree.Element, error) {
 	elem := &x.doc.Element
+
+	actualNamespace := ""
 
 	for peIdx, pe := range p.Elem {
 
-		// Perform schema queries
-		sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
-			Path: &schemapb.Path{
-				Elem:   p.Elem[:peIdx],
-				Origin: p.Origin,
-				Target: p.Target,
-			},
-			Schema: x.schema,
-		})
-		if err != nil {
-			return err
-		}
-		// deduce namespace from SchemaRequest
-		namespace := getNamespaceFromGetSchemaResponse(sr)
-		_ = namespace
+		//namespace := x.namespaces.Resolve(namespaceUri)
 
 		// generate an xpath from the path element
 		// this is to find the next level xml element
-		path, err := pathElem2Xpath(pe)
+		path, err := pathElem2Xpath(pe, "")
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var nextElem *etree.Element
 		if nextElem = elem.FindElementPath(path); nextElem == nil {
+
+			namespaceUri, err := x.ResolveNamespace(ctx, p, peIdx)
+			if err != nil {
+				return nil, err
+			}
+
 			// if there is no such element, create it
+			//elemName := toNamespacedName(pe.Name, namespace)
 			nextElem = elem.CreateElement(pe.Name)
+			if namespaceUri != actualNamespace {
+				nextElem.CreateAttr("xmlns", namespaceUri)
+			}
 			// with all its keys
 			for k, v := range pe.Key {
+				//keyNamespaced := toNamespacedName(k, namespace)
 				keyElem := nextElem.CreateElement(k)
 				keyElem.CreateText(v)
 			}
 		}
 		// prepare next iteration
 		elem = nextElem
+		xmlns := elem.SelectAttrValue("xmlns", "")
+		if xmlns != "" {
+			actualNamespace = elem.Space
+		}
+	}
+	return elem, nil
+}
+
+func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemapb.TypedValue) error {
+
+	elem, err := x.forward(ctx, p)
+	if err != nil {
+		return err
 	}
 
 	value, err := valueAsString(v)
@@ -144,6 +192,31 @@ func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemap
 
 	return nil
 }
+
+func (x *XMLConfigBuilder) ResolveNamespace(ctx context.Context, p *schemapb.Path, peIdx int) (namespaceUri string, err error) {
+	// Perform schema queries
+	sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
+		Path: &schemapb.Path{
+			Elem:   p.Elem[:peIdx+1],
+			Origin: p.Origin,
+			Target: p.Target,
+		},
+		Schema: x.schema,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	// deduce namespace from SchemaRequest
+	return getNamespaceFromGetSchemaResponse(sr), nil
+}
+
+// func (x *XMLConfigBuilder) addNamespaceDefs() {
+// 	for uri, nsid := range x.namespaces.GetNamespaces() {
+// 		key := fmt.Sprintf("xmlns:%s", nsid)
+// 		x.doc.Root().CreateAttr(key, uri)
+// 	}
+// }
 
 func getNamespaceFromGetSchemaResponse(sr *schemapb.GetSchemaResponse) (namespace string) {
 	switch sr.Schema.(type) {
@@ -185,12 +258,12 @@ func valueAsString(v *schemapb.TypedValue) (string, error) {
 	return "", fmt.Errorf("TypedValue to String failed")
 }
 
-func pathElem2Xpath(pe *schemapb.PathElem) (etree.Path, error) {
+func pathElem2Xpath(pe *schemapb.PathElem, namespace string) (etree.Path, error) {
 	var keys []string
 
 	// prepare the keys -> "k=v"
 	for k, v := range pe.Key {
-		keys = append(keys, fmt.Sprintf("%s=%s", k, v))
+		keys = append(keys, fmt.Sprintf("%s='%s'", k, v))
 	}
 
 	keyString := ""
@@ -199,6 +272,81 @@ func pathElem2Xpath(pe *schemapb.PathElem) (etree.Path, error) {
 		keyString = "[" + strings.Join(keys, ",") + "]"
 	}
 
+	name := pe.Name
+	//name := toNamespacedName(pe.Name, namespace)
+
 	// build the final xpath
-	return etree.CompilePath(fmt.Sprintf("./%s%s", pe.Name, keyString))
+	filterString := fmt.Sprintf("./%s%s", name, keyString)
+	return etree.CompilePath(filterString)
 }
+
+// func toNamespacedName(name, namespace string) string {
+// 	if namespace != "" {
+// 		name = fmt.Sprintf("%s:%s", namespace, name)
+// 	}
+// 	return name
+// }
+
+// type NamespaceIndex struct {
+// 	namespaces map[string]string   // namespace uri -> key
+// 	keys       map[string]struct{} // map of already assigned keys
+// }
+
+// func NewNamespaceIndex() *NamespaceIndex {
+// 	return &NamespaceIndex{
+// 		namespaces: map[string]string{},
+// 		keys:       map[string]struct{}{},
+// 	}
+// }
+
+// // GetNamespaces returs the namespace uri and keys
+// // the format is uri -> key
+// func (ni *NamespaceIndex) GetNamespaces() map[string]string {
+// 	return ni.namespaces
+// }
+
+// func (ni *NamespaceIndex) Resolve(uri string) (identifier string) {
+// 	if uri == "" {
+// 		return ""
+// 	}
+// 	if id, exists := ni.namespaces[uri]; exists {
+// 		return id
+// 	}
+// 	return ni.addNewEntry(uri)
+// }
+
+// // getNextKey determines the next unused identifer for the namespaces
+// func (ni *NamespaceIndex) getNextKey() (key string) {
+// 	length := len(ni.keys) + 1
+// 	for {
+// 		key := intToLetters(length)
+// 		if _, exists := ni.keys[key]; !exists {
+// 			return key
+// 		}
+// 		length = length + 1
+// 	}
+// }
+
+// // addNewEntry adds a new uri to the NamespaceIndex
+// // using getNextKey to determine which key to assign
+// func (ni *NamespaceIndex) addNewEntry(uri string) (identifier string) {
+// 	k := ni.getNextKey()
+// 	ni.keys[k] = struct{}{}
+// 	ni.namespaces[uri] = k
+// 	return k
+// }
+
+// // intToLetters converts a number into Alpabetical characters
+// // 0...25 => A...Z
+// // 26... => AA...AZ
+// // ...
+// func intToLetters(number int) (letters string) {
+// 	number--
+// 	if firstLetter := number / 26; firstLetter > 0 {
+// 		letters += intToLetters(firstLetter)
+// 		letters += string('A' + number%26)
+// 	} else {
+// 		letters += string('A' + number)
+// 	}
+// 	return
+// }
