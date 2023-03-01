@@ -30,6 +30,7 @@ func newNCTarget(ctx context.Context, cfg *config.SBI, schemaClient schemapb.Sch
 			options.WithAuthUsername(cfg.Credentials.Username),
 			options.WithAuthPassword(cfg.Credentials.Password),
 			options.WithTransportType("standard"),
+			options.WithPort(830),
 		)
 	}
 
@@ -58,15 +59,146 @@ func newNCTarget(ctx context.Context, cfg *config.SBI, schemaClient schemapb.Sch
 }
 
 func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*schemapb.GetDataResponse, error) {
+
+	source := "running"
+
+	xmlc := newXMLConfigBuilder(t.schemaClient, t.schema, false)
+	for _, p := range req.Path {
+		_, err := xmlc.AddElement(ctx, p)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	filterDoc, err := xmlc.GetDoc()
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(filterDoc)
+	filter := CreateFilterOption(filterDoc)
+	ncResponse, err := t.driver.GetConfig(source, filter, options.WithNetconfForceSelfClosingTags())
+	if err != nil {
+		return nil, err
+	}
+	if ncResponse.Failed != nil {
+		return nil, ncResponse.Failed
+	}
+
+	fmt.Println(ncResponse.Result)
+
+	data := NewXML2SchemapbConfigAdapter(t.schemaClient, t.schema)
+
+	err = data.ParseXMLConfig(ncResponse.Result, "/rpc-reply/data/*")
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+	fmt.Println()
+	fmt.Println("-------------------------------")
+
+	data.Transform(context.TODO())
+
 	return nil, nil
+
 }
+
+type XML2SchemapbConfigAdapter struct {
+	doc          *etree.Document
+	schemaClient schemapb.SchemaServerClient
+	schema       *schemapb.Schema
+}
+
+func (x *XML2SchemapbConfigAdapter) ParseXMLConfig(doc string, newRootXpath string) error {
+	err := x.doc.ReadFromString(doc)
+	if err != nil {
+		return nil
+	}
+	r := x.doc.FindElement(newRootXpath)
+	if r == nil {
+		return fmt.Errorf("unable to find %q in %s", newRootXpath, doc)
+	}
+	x.doc.SetRoot(r)
+	return nil
+}
+
+func (x *XML2SchemapbConfigAdapter) Transform(ctx context.Context) {
+	result := &schemapb.Notification{}
+	x.transformRecursive(ctx, x.doc.Root(), []*schemapb.PathElem{}, result)
+}
+
+func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *etree.Element, pelems []*schemapb.PathElem, result *schemapb.Notification) error {
+	pelems = append(pelems, &schemapb.PathElem{Name: e.Tag})
+
+	// process terminal values
+	data := strings.TrimSpace(e.Text())
+	if data != "" {
+
+		// retrieve schema
+		sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
+			Path: &schemapb.Path{
+				Elem: pelems,
+			},
+			Schema: x.schema,
+		})
+		if err != nil {
+			return err
+		}
+
+		foo := sr.GetField()
+		_ = foo
+
+		// create schemapb.update
+		u := &schemapb.Update{
+			Path: &schemapb.Path{
+				Elem: pelems,
+			},
+			Value: &schemapb.TypedValue{Value: &schemapb.TypedValue_StringVal{StringVal: data}},
+		}
+		result.Update = append(result.Update, u)
+		fmt.Println(u)
+	}
+
+	// continue with all child
+	for _, c := range e.ChildElements() {
+		err := x.transformRecursive(ctx, c, pelems, result)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func NewXML2SchemapbConfigAdapter(ssc schemapb.SchemaServerClient, schema *schemapb.Schema) *XML2SchemapbConfigAdapter {
+	return &XML2SchemapbConfigAdapter{
+		doc:          etree.NewDocument(),
+		schemaClient: ssc,
+		schema:       schema,
+	}
+}
+
+func CreateFilterOption(filter string) util.Option {
+	return func(x interface{}) error {
+		oo, ok := x.(*netconf.OperationOptions)
+
+		if !ok {
+			return util.ErrIgnoredOption
+		}
+		oo.Filter = filter
+		return nil
+	}
+}
+
 func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*schemapb.SetDataResponse, error) {
 
-	xmlc := NewXMLConfigBuilder(t.schemaClient, t.schema)
+	xmlc := newXMLConfigBuilder(t.schemaClient, t.schema, false)
 
 	for _, u := range req.Update {
 		xmlc.Add(ctx, u.Path, u.Value)
 	}
+	// TODO: take care on interferrance of Delete vs. Update
 
 	for _, d := range req.Delete {
 		xmlc.Delete(ctx, d)
@@ -76,7 +208,28 @@ func (t *ncTarget) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sche
 	if err != nil {
 		return nil, err
 	}
+
+	// add extra <config></config> element
+	xdoc = fmt.Sprintf("<config>%s</config>", xdoc)
 	fmt.Println(xdoc)
+
+	// edit the config
+	resp, err := t.driver.EditConfig("candidate", xdoc)
+	if err != nil {
+		return nil, err
+	}
+	if resp.Failed != nil {
+		return nil, resp.Failed
+	}
+
+	// commit the config
+	resp, err = t.driver.Commit()
+	if err != nil {
+		return nil, err
+	}
+	if resp.Failed != nil {
+		return nil, resp.Failed
+	}
 
 	return nil, nil
 }
@@ -94,18 +247,18 @@ func (t *ncTarget) Close() {
 }
 
 type XMLConfigBuilder struct {
-	doc          *etree.Document
-	schemaClient schemapb.SchemaServerClient
-	schema       *schemapb.Schema
-	//namespaces   *NamespaceIndex
+	doc            *etree.Document
+	schemaClient   schemapb.SchemaServerClient
+	schema         *schemapb.Schema
+	honorNamespace bool
 }
 
-func NewXMLConfigBuilder(ssc schemapb.SchemaServerClient, schema *schemapb.Schema) *XMLConfigBuilder {
+func newXMLConfigBuilder(ssc schemapb.SchemaServerClient, schema *schemapb.Schema, honorNamespace bool) *XMLConfigBuilder {
 	return &XMLConfigBuilder{
-		doc:          etree.NewDocument(),
-		schemaClient: ssc,
-		schema:       schema,
-		//namespaces:   NewNamespaceIndex(),
+		doc:            etree.NewDocument(),
+		schemaClient:   ssc,
+		schema:         schema,
+		honorNamespace: honorNamespace,
 	}
 }
 
@@ -121,7 +274,7 @@ func (x *XMLConfigBuilder) GetDoc() (string, error) {
 
 func (x *XMLConfigBuilder) Delete(ctx context.Context, p *schemapb.Path) error {
 
-	elem, err := x.forward(ctx, p)
+	elem, err := x.fastForward(ctx, p)
 	if err != nil {
 		return err
 	}
@@ -131,7 +284,7 @@ func (x *XMLConfigBuilder) Delete(ctx context.Context, p *schemapb.Path) error {
 	return nil
 }
 
-func (x *XMLConfigBuilder) forward(ctx context.Context, p *schemapb.Path) (*etree.Element, error) {
+func (x *XMLConfigBuilder) fastForward(ctx context.Context, p *schemapb.Path) (*etree.Element, error) {
 	elem := &x.doc.Element
 
 	actualNamespace := ""
@@ -157,7 +310,7 @@ func (x *XMLConfigBuilder) forward(ctx context.Context, p *schemapb.Path) (*etre
 			// if there is no such element, create it
 			//elemName := toNamespacedName(pe.Name, namespace)
 			nextElem = elem.CreateElement(pe.Name)
-			if namespaceUri != actualNamespace {
+			if x.honorNamespace && namespaceUri != actualNamespace {
 				nextElem.CreateAttr("xmlns", namespaceUri)
 			}
 			// with all its keys
@@ -179,7 +332,7 @@ func (x *XMLConfigBuilder) forward(ctx context.Context, p *schemapb.Path) (*etre
 
 func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemapb.TypedValue) error {
 
-	elem, err := x.forward(ctx, p)
+	elem, err := x.fastForward(ctx, p)
 	if err != nil {
 		return err
 	}
@@ -191,6 +344,14 @@ func (x *XMLConfigBuilder) Add(ctx context.Context, p *schemapb.Path, v *schemap
 	elem.CreateText(value)
 
 	return nil
+}
+
+func (x *XMLConfigBuilder) AddElement(ctx context.Context, p *schemapb.Path) (*etree.Element, error) {
+	elem, err := x.fastForward(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+	return elem, nil
 }
 
 func (x *XMLConfigBuilder) ResolveNamespace(ctx context.Context, p *schemapb.Path, peIdx int) (namespaceUri string, err error) {

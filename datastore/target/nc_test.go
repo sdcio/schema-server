@@ -10,7 +10,8 @@ import (
 
 func Test_pathElem2Xpath(t *testing.T) {
 	type args struct {
-		pe *schemapb.PathElem
+		pe        *schemapb.PathElem
+		namespace string
 	}
 	tests := []struct {
 		name    string
@@ -27,6 +28,7 @@ func Test_pathElem2Xpath(t *testing.T) {
 						"name": "eth0",
 					},
 				},
+				namespace: "",
 			},
 			want:    etree.MustCompilePath("./interface[name=eth0]"),
 			wantErr: false,
@@ -34,7 +36,7 @@ func Test_pathElem2Xpath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := pathElem2Xpath(tt.args.pe)
+			got, err := pathElem2Xpath(tt.args.pe, tt.args.namespace)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("pathElem2Xpath() error = %v, wantErr %v", err, tt.wantErr)
 				return
