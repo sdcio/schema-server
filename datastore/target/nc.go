@@ -99,7 +99,7 @@ func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*sche
 	fmt.Println()
 	fmt.Println("-------------------------------")
 
-	data.Transform(context.TODO())
+	data.Transform(ctx)
 
 	return nil, nil
 
@@ -134,19 +134,19 @@ func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *e
 
 	// process terminal values
 	data := strings.TrimSpace(e.Text())
+
+	// retrieve schema
+	sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
+		Path: &schemapb.Path{
+			Elem: pelems,
+		},
+		Schema: x.schema,
+	})
+	if err != nil {
+		return err
+	}
+
 	if data != "" {
-
-		// retrieve schema
-		sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
-			Path: &schemapb.Path{
-				Elem: pelems,
-			},
-			Schema: x.schema,
-		})
-		if err != nil {
-			return err
-		}
-
 		foo := sr.GetField()
 		_ = foo
 
@@ -159,6 +159,15 @@ func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *e
 		}
 		result.Update = append(result.Update, u)
 		fmt.Println(u)
+	} else {
+		c := sr.GetContainer()
+		for _, ls := range c.Keys {
+			pelem := pelems[len(pelems)-1]
+			if pelem.Key == nil {
+				pelem.Key = map[string]string{}
+			}
+			pelem.Key[ls.Name] = e.FindElement("./" + ls.Name).Text()
+		}
 	}
 
 	// continue with all child
