@@ -7,11 +7,14 @@ import (
 	"github.com/iptecharch/schema-server/config"
 	"github.com/iptecharch/schema-server/datastore/target"
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
+
+	log.SetLevel(log.TraceLevel)
 
 	ctx := context.TODO()
 
@@ -61,8 +64,13 @@ func main() {
 	if err != nil {
 		fmt.Printf("ERROR: %v", err)
 	}
-	_ = gdr
 
-	return
-
+	for _, n := range gdr.GetNotification() {
+		for _, u := range n.Update {
+			log.Debug(u.String())
+		}
+		for _, u := range n.Delete {
+			log.Debug(u.String())
+		}
+	}
 }

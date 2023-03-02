@@ -52,7 +52,7 @@ func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*sche
 	if err != nil {
 		return nil, err
 	}
-	log.Debug("netconf filter:\n%s", filterDoc)
+	log.Debugf("netconf filter:\n%s", filterDoc)
 
 	// execute the GetConfig rpc
 	ncResponse, err := t.driver.GetConfig(source, filterDoc)
@@ -60,7 +60,7 @@ func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*sche
 		return nil, err
 	}
 
-	log.Debugf("netconf response:\n%s")
+	log.Debugf("netconf response:\n%s", ncResponse.DocAsString())
 
 	// init an XML2SchemapbConfigAdapter used to convert the netconf xml config to a schemapb.Notification
 	data := netconf.NewXML2SchemapbConfigAdapter(t.schemaClient, t.schema)

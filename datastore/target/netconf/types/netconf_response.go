@@ -11,3 +11,11 @@ func NewNetconfResponse(doc *etree.Document) *NetconfResponse {
 		Doc: doc,
 	}
 }
+
+func (nr *NetconfResponse) DocAsString() string {
+	if nr.Doc == nil {
+		return ""
+	}
+	s, _ := nr.Doc.WriteToString()
+	return s
+}

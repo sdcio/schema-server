@@ -7,6 +7,7 @@ import (
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 )
 
+// TransformationContext
 type TransformationContext struct {
 	// LeafList contains the leaflist of the actual hierarchie level
 	// it is to be converted into an schemapb.update on existing the level
@@ -40,7 +41,6 @@ func (tc *TransformationContext) Close() []*schemapb.Update {
 				},
 			},
 		}
-		fmt.Println(u)
 		result = append(result, u)
 	}
 	return result
