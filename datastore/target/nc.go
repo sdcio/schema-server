@@ -126,14 +126,11 @@ func (x *XML2SchemapbConfigAdapter) ParseXMLConfig(doc string, newRootXpath stri
 
 func (x *XML2SchemapbConfigAdapter) Transform(ctx context.Context) {
 	result := &schemapb.Notification{}
-	x.transformRecursive(ctx, x.doc.Root(), []*schemapb.PathElem{}, result)
+	x.transformRecursive(ctx, x.doc.Root(), []*schemapb.PathElem{}, result, nil)
 }
 
-func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *etree.Element, pelems []*schemapb.PathElem, result *schemapb.Notification) error {
+func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *etree.Element, pelems []*schemapb.PathElem, result *schemapb.Notification, tc *TransformationContext) error {
 	pelems = append(pelems, &schemapb.PathElem{Name: e.Tag})
-
-	// process terminal values
-	data := strings.TrimSpace(e.Text())
 
 	// retrieve schema
 	sr, err := x.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
@@ -146,37 +143,154 @@ func (x *XML2SchemapbConfigAdapter) transformRecursive(ctx context.Context, e *e
 		return err
 	}
 
-	if data != "" {
-		foo := sr.GetField()
-		_ = foo
-
-		// create schemapb.update
-		u := &schemapb.Update{
-			Path: &schemapb.Path{
-				Elem: pelems,
-			},
-			Value: &schemapb.TypedValue{Value: &schemapb.TypedValue_StringVal{StringVal: data}},
+	switch sr.Schema.(type) {
+	case *schemapb.GetSchemaResponse_Container:
+		err = x.transformContainer(ctx, e, sr, pelems, result)
+		if err != nil {
+			return err
 		}
-		result.Update = append(result.Update, u)
-		fmt.Println(u)
-	} else {
-		c := sr.GetContainer()
-		for _, ls := range c.Keys {
-			pelem := pelems[len(pelems)-1]
-			if pelem.Key == nil {
-				pelem.Key = map[string]string{}
-			}
-			pelem.Key[ls.Name] = e.FindElement("./" + ls.Name).Text()
-		}
-	}
 
-	// continue with all child
-	for _, c := range e.ChildElements() {
-		err := x.transformRecursive(ctx, c, pelems, result)
+	case *schemapb.GetSchemaResponse_Field:
+		err = x.transformField(ctx, e, pelems, result)
+		if err != nil {
+			return err
+		}
+
+	case *schemapb.GetSchemaResponse_Leaflist:
+		err = x.transformLeafList(ctx, e, sr, pelems, result, tc)
 		if err != nil {
 			return err
 		}
 	}
+
+	return nil
+}
+
+func (x *XML2SchemapbConfigAdapter) transformContainer(ctx context.Context, e *etree.Element, sr *schemapb.GetSchemaResponse, pelems []*schemapb.PathElem, result *schemapb.Notification) error {
+	c := sr.GetContainer()
+	for _, ls := range c.Keys {
+		pelem := pelems[len(pelems)-1]
+		if pelem.Key == nil {
+			pelem.Key = map[string]string{}
+		}
+		pelem.Key[ls.Name] = e.FindElement("./" + ls.Name).Text()
+	}
+
+	ntc := NewTransformationContext(pelems)
+
+	// continue with all child
+	for _, ce := range e.ChildElements() {
+		err := x.transformRecursive(ctx, ce, pelems, result, ntc)
+		if err != nil {
+			return err
+		}
+	}
+
+	leafListUpdates := ntc.Close()
+	result.Update = append(result.Update, leafListUpdates...)
+
+	return nil
+}
+
+func (x *XML2SchemapbConfigAdapter) transformLeafList(ctx context.Context, e *etree.Element, sr *schemapb.GetSchemaResponse, pelems []*schemapb.PathElem, result *schemapb.Notification, tc *TransformationContext) error {
+
+	// process terminal values
+	data := strings.TrimSpace(e.Text())
+
+	typedval := &schemapb.TypedValue{Value: &schemapb.TypedValue_StringVal{StringVal: data}}
+
+	name := pelems[len(pelems)-1].Name
+	tc.AddLeafListEntry(name, typedval)
+	return nil
+}
+
+type TransformationContext struct {
+	// LeafList contains the leaflist of the actual hierarchie level
+	// it is to be converted into an schemapb.update on existing the level
+	leafLists map[string][]*schemapb.TypedValue
+	pelems    []*schemapb.PathElem
+}
+
+func NewTransformationContext(pelems []*schemapb.PathElem) *TransformationContext {
+	return &TransformationContext{
+		pelems: pelems,
+	}
+}
+
+// Close when closing the context, updates for LeafLists will be calculated and returned
+func (tc *TransformationContext) Close() []*schemapb.Update {
+	result := []*schemapb.Update{}
+	// process LeafList Elements
+	for k, v := range tc.leafLists {
+
+		pathElems := append(tc.pelems, &schemapb.PathElem{Name: k})
+
+		u := &schemapb.Update{
+			Path: &schemapb.Path{
+				Elem: pathElems,
+			},
+			Value: &schemapb.TypedValue{
+				Value: &schemapb.TypedValue_LeaflistVal{
+					LeaflistVal: &schemapb.ScalarArray{
+						Element: v,
+					},
+				},
+			},
+		}
+		fmt.Println(u)
+		result = append(result, u)
+	}
+	return result
+}
+
+func (tc *TransformationContext) String() (result string, err error) {
+	result = "TransformationContext\n"
+	for k, v := range tc.leafLists {
+		vals := []string{}
+		_ = vals
+		for _, val := range v {
+			sval, err := valueAsString(val)
+			if err != nil {
+				return "", err
+			}
+			vals = append(vals, sval)
+		}
+		result += fmt.Sprintf("k: %s [%s]\n", k, strings.Join(vals, ", "))
+	}
+	return result, nil
+}
+
+func (tc *TransformationContext) AddLeafListEntry(name string, val *schemapb.TypedValue) error {
+
+	// we do not expect the leafLists to be excesively in use, so we do late initialization
+	// although the check is performed on every call to this function
+	if tc.leafLists == nil {
+		tc.leafLists = map[string][]*schemapb.TypedValue{}
+	}
+
+	var exists bool
+	// add the tv array if it is the first element and hence does not exist
+	if _, exists = tc.leafLists[name]; !exists {
+		tc.leafLists[name] = []*schemapb.TypedValue{}
+	}
+	// append the tv to the list
+	tc.leafLists[name] = append(tc.leafLists[name], val)
+	return nil
+}
+
+func (x *XML2SchemapbConfigAdapter) transformField(ctx context.Context, e *etree.Element, pelems []*schemapb.PathElem, result *schemapb.Notification) error {
+	// process terminal values
+	data := strings.TrimSpace(e.Text())
+
+	// create schemapb.update
+	u := &schemapb.Update{
+		Path: &schemapb.Path{
+			Elem: pelems,
+		},
+		Value: &schemapb.TypedValue{Value: &schemapb.TypedValue_StringVal{StringVal: data}},
+	}
+	result.Update = append(result.Update, u)
+	fmt.Println(u)
 	return nil
 }
 

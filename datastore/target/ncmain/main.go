@@ -53,8 +53,9 @@ func main() {
 	gdr, err := t.Get(ctx, &schemapb.GetDataRequest{
 		Name: "foobar",
 		Path: []*schemapb.Path{
-			{Elem: []*schemapb.PathElem{{Name: "configuration"}, {Name: "system"}}},
-			{Elem: []*schemapb.PathElem{{Name: "configuration"}, {Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "ge5"}}, {Name: "mtu"}}},
+			//{Elem: []*schemapb.PathElem{{Name: "configuration"}, {Name: "system"}}},
+			//{Elem: []*schemapb.PathElem{{Name: "configuration"}, {Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "ge5"}}, {Name: "mtu"}}},
+			{Elem: []*schemapb.PathElem{{Name: "configuration"}, {Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "ge5"}}}},
 		},
 	})
 	if err != nil {
