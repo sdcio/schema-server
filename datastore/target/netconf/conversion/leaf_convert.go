@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strings"
 
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	log "github.com/sirupsen/logrus"
@@ -12,7 +13,6 @@ import (
 func Convert(value string, lst *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
 	switch lst.Type {
 	case "string":
-		// TODO: length
 		return ConvertString(value, lst)
 	case "union":
 		return ConvertUnion(value, lst.UnionTypes)
@@ -38,27 +38,62 @@ func Convert(value string, lst *schemapb.SchemaLeafType) (*schemapb.TypedValue, 
 		// TODO: fraction-digits (https://www.rfc-editor.org/rfc/rfc6020.html#section-9.3.4)
 		return ConvertUint64(value, lst)
 	case "enumeration":
+		return ConvertEnumeration(value, lst)
 	case "bits":
 	// TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.7
 	case "binary": // TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.8
-	case "leafref": // TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.9
+		return ConvertBinary(value, lst)
+	case "leafref": // https://www.rfc-editor.org/rfc/rfc6020.html#section-9.9
+		// leafrefs are being treated as strings.
+		// further validation needs to happen later in the process
+		return ConvertLeafRef(value, lst)
 	case "identityref": //TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.10
 	case "instance-identifier": //TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.13
 	}
 	log.Errorf("type %q not implemented", lst.Type)
 	return ConvertString(value, lst)
 }
+func ConvertBinary(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// Binary is basically a base64 encoded string that might carry a length restriction
+	// so we should be fine with delegating to string
+	return ConvertString(value, slt)
+}
+
+func ConvertLeafRef(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// a leafref should basically be a string value that also exists somewhere else in the config as a value.
+	// we leave the validation of the leafrefs to a different party at a later stage
+	return ConvertString(value, slt)
+}
+
+func ConvertEnumeration(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// iterate the valid values as per schema
+	for _, item := range slt.Values {
+		// if value is found, return a StringVal
+		if value == item {
+			return &schemapb.TypedValue{
+				Value: &schemapb.TypedValue_StringVal{
+					StringVal: value,
+				},
+			}, nil
+		}
+	}
+	// If value is not found return an error
+	return nil, fmt.Errorf("value %q does not match any valid enum values [%s]", value, strings.Join(slt.Values, ", "))
+}
 
 func ConvertBoolean(value string, _ *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
 	var bval bool
+	// check for true or false in string representation
 	switch value {
 	case "true":
 		bval = true
 	case "false":
 		bval = false
 	default:
+		// if it is any other value, return error
 		return nil, fmt.Errorf("illegal value %q for boolean type", value)
 	}
+	// otherwise return the BoolVal TypedValue
 	return &schemapb.TypedValue{
 		Value: &schemapb.TypedValue_BoolVal{
 			BoolVal: bval,
@@ -161,6 +196,27 @@ func ConvertInt64(value string, lst *schemapb.SchemaLeafType) (*schemapb.TypedVa
 }
 
 func ConvertString(value string, lst *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// check length of the string if the length property is set
+	// length will contain a range like string definition "5..60" or "7..10|40..45"
+	if len(lst.Length) != 0 {
+		r := NewUrnges(lst.Length, 0, math.MaxUint64)
+
+		inLength := false
+		for _, rng := range r.rnges {
+			if rng.isInRange(uint64(len(value))) {
+				inLength = true
+			}
+		}
+		if !inLength {
+			// prepare log message, collecting string rep of the ranges
+			str_ranges := []string{}
+			for _, x := range r.rnges {
+				str_ranges = append(str_ranges, x.String())
+			}
+			return nil, fmt.Errorf("length of the value (%d) is not within the schema defined ranges [ %s ]", len(value), strings.Join(str_ranges, ", "))
+		}
+	}
+
 	overallMatch := true
 	// If the type has multiple "pattern" statements, the expressions are
 	// ANDed together, i.e., all such expressions have to match.

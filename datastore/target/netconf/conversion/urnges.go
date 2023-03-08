@@ -30,6 +30,11 @@ func (r *URng) isInRange(value uint64) bool {
 	return r.min <= value && value <= r.max
 }
 
+func (r *URng) String() string {
+	// return the result
+	return fmt.Sprintf("%d..%d", r.min, r.max)
+}
+
 func (r *URnges) isWithinAnyRange(value string) (*schemapb.TypedValue, error) {
 	uintValue, err := strconv.ParseUint(value, 10, 64)
 	if err != nil {
@@ -68,27 +73,38 @@ func (r *URnges) parse(rangeDef string, min, max uint64) error {
 	rangeStrings := strings.Split(rangeDef, "|")
 	for _, rangeString := range rangeStrings {
 		range_minmax := strings.Split(rangeString, "..")
-		if len(range_minmax) != 2 {
+
+		switch len(range_minmax) {
+		case 1: // we do not have a real range but an exact number e.g. "45"
+			exactValue, err := strconv.ParseUint(range_minmax[0], 10, 64)
+			if err != nil {
+				return err
+			}
+			r.rnges = append(r.rnges, &URng{
+				min: exactValue,
+				max: exactValue,
+			})
+		case 2: // we do have a real range e.g. "8..25"
+			var err error
+			if range_minmax[0] != "min" {
+				min, err = strconv.ParseUint(range_minmax[0], 10, 64)
+				if err != nil {
+					return err
+				}
+			}
+			if range_minmax[1] != "max" {
+				max, err = strconv.ParseUint(range_minmax[1], 10, 64)
+				if err != nil {
+					return err
+				}
+			}
+			r.rnges = append(r.rnges, &URng{
+				min: min,
+				max: max,
+			})
+		default: // any other case is illegal
 			return fmt.Errorf("illegal range expression %q", rangeString)
 		}
-
-		var err error
-		if range_minmax[0] != "min" {
-			min, err = strconv.ParseUint(range_minmax[0], 10, 64)
-			if err != nil {
-				return err
-			}
-		}
-		if range_minmax[1] != "max" {
-			max, err = strconv.ParseUint(range_minmax[1], 10, 64)
-			if err != nil {
-				return err
-			}
-		}
-		r.rnges = append(r.rnges, &URng{
-			min: min,
-			max: max,
-		})
 	}
 	return nil
 }
