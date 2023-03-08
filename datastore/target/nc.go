@@ -34,7 +34,14 @@ func newNCTarget(_ context.Context, cfg *config.SBI, schemaClient schemapb.Schem
 }
 
 func (t *ncTarget) Get(ctx context.Context, req *schemapb.GetDataRequest) (*schemapb.GetDataResponse, error) {
-	source := "running"
+	var source string
+
+	switch req.Datastore.Type {
+	case schemapb.Type_MAIN:
+		source = "running"
+	case schemapb.Type_CANDIDATE:
+		source = "candidate"
+	}
 
 	// init a new XMLConfigBuilder for the pathfilter
 	pathfilterXmlBuilder := netconf.NewXMLConfigBuilder(t.schemaClient, t.schema, false)
