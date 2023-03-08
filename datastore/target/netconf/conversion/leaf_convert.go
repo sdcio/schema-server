@@ -39,20 +39,36 @@ func Convert(value string, lst *schemapb.SchemaLeafType) (*schemapb.TypedValue, 
 		return ConvertUint64(value, lst)
 	case "enumeration":
 		return ConvertEnumeration(value, lst)
+	case "empty":
+		// TODO https://www.rfc-editor.org/rfc/rfc6020.html#section-9.11
+		// I'm not sure what should be returned atm.
 	case "bits":
 	// TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.7
-	case "binary": // TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.8
+	case "binary": // https://www.rfc-editor.org/rfc/rfc6020.html#section-9.8
 		return ConvertBinary(value, lst)
 	case "leafref": // https://www.rfc-editor.org/rfc/rfc6020.html#section-9.9
 		// leafrefs are being treated as strings.
 		// further validation needs to happen later in the process
 		return ConvertLeafRef(value, lst)
 	case "identityref": //TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.10
+		return ConvertIdentityRef(value, lst)
 	case "instance-identifier": //TODO: https://www.rfc-editor.org/rfc/rfc6020.html#section-9.13
+		return ConvertInstanceIdentifier(value, lst)
 	}
 	log.Errorf("type %q not implemented", lst.Type)
 	return ConvertString(value, lst)
 }
+
+func ConvertInstanceIdentifier(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// delegate to string, validation is left for a different party at a later stage in processing
+	return ConvertString(value, slt)
+}
+
+func ConvertIdentityRef(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
+	// delegate to string, validation is left for a different party at a later stage in processing
+	return ConvertString(value, slt)
+}
+
 func ConvertBinary(value string, slt *schemapb.SchemaLeafType) (*schemapb.TypedValue, error) {
 	// Binary is basically a base64 encoded string that might carry a length restriction
 	// so we should be fine with delegating to string
