@@ -2,13 +2,19 @@ package target
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"sync"
 	"time"
 
 	"github.com/iptecharch/schema-server/config"
 	"github.com/iptecharch/schema-server/datastore/target/netconf"
 	"github.com/iptecharch/schema-server/datastore/target/netconf/driver/scrapligo"
+	"github.com/iptecharch/schema-server/datastore/target/netconf/types"
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	"github.com/iptecharch/schema-server/utils"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 type ncTarget struct {
@@ -158,9 +164,66 @@ func (t *ncTarget) Subscribe() {}
 
 func (t *ncTarget) Sync(ctx context.Context, syncConfig *config.Sync, syncCh chan *SyncUpdate) {
 	log.Infof("starting target %s sync", t.sbi.Address)
-	log.Infof("sync still is a NOOP on netconf targets")
-	<-ctx.Done()
-	log.Infof("sync stopped: %v", ctx.Err())
+	wg := new(sync.WaitGroup)
+	wg.Add(len(syncConfig.NC))
+	for _, ncSync := range syncConfig.NC {
+		go func(ncSync *config.NCSync) {
+			defer wg.Done()
+			xb := netconf.NewXMLConfigBuilder(t.schemaClient, t.schema, true)
+			for _, p := range ncSync.Paths {
+				sp, err := utils.ParsePath(p)
+				if err != nil {
+					log.Errorf("failed to parse path %s: %v", p, err)
+					return
+				}
+				_, err = xb.AddElement(ctx, sp)
+				if err != nil {
+					log.Errorf("failed to add path %s to XML doc: %v", p, err)
+					return
+				}
+			}
+			filter, err := xb.GetDoc()
+			if err != nil {
+				log.Errorf("failed to build XML filter: %v", err)
+				return
+			}
+			ticker := time.NewTicker(ncSync.Period)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					var rsp *types.NetconfResponse
+					var err error
+					switch ncSync.Name {
+					case "config":
+						rsp, err = t.driver.GetConfig("running", filter)
+					case "state":
+						rsp, err = t.driver.Get(filter)
+					default:
+						log.Errorf("unknown NC sync name %s", ncSync.Name)
+						return
+					}
+					if err != nil {
+						log.Errorf("failed to run NC Get for %s: %v", ncSync.Name, err)
+						continue
+					}
+					trans := netconf.NewXML2SchemapbConfigAdapter(t.schemaClient, t.schema)
+					notif := trans.Transform(ctx, rsp.Doc)
+					// debug
+					rsp.Doc.WriteTo(os.Stdout)
+					fmt.Println(prototext.Format(notif))
+					// debug
+					syncCh <- &SyncUpdate{
+						Tree:   ncSync.Name,
+						Update: notif,
+					}
+				}
+			}
+		}(ncSync)
+	}
+	wg.Wait()
 }
 
 func (t *ncTarget) Close() {

@@ -38,7 +38,7 @@ type Creds struct {
 type Sync struct {
 	Validate bool        `yaml:"validate,omitempty" json:"validate,omitempty"`
 	GNMI     []*GNMISync `yaml:"gnmi,omitempty" json:"gnmi,omitempty"`
-	// NATS     *NATSSync
+	NC       []*NCSync   `yaml:"nc,omitempty" json:"nc,omitempty"`
 }
 
 type GNMISync struct {
@@ -49,10 +49,11 @@ type GNMISync struct {
 	Encoding       string        `yaml:"encoding,omitempty" json:"encoding,omitempty"`
 }
 
-// type NATSSync struct {
-// 	Address string
-// 	Subject string
-// }
+type NCSync struct {
+	Name   string        `yaml:"name,omitempty" json:"name,omitempty"`
+	Paths  []string      `yaml:"paths,omitempty" json:"paths,omitempty"`
+	Period time.Duration `yaml:"period,omitempty" json:"period,omitempty"`
+}
 
 func (ds *DatastoreConfig) validateSetDefaults() error {
 	var err error

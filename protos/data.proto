@@ -247,10 +247,13 @@ message ScalarArray {
 
 // Southbound interface of the datastore
 message Target {
-    string      type        = 1;
-    string      address     = 2;
-    TLS         tls         = 3;
-    Credentials credentials = 4;
+    string      type                = 1;
+    string      address             = 2;
+    uint32      port                = 3;
+    TLS         tls                 = 4;
+    Credentials credentials         = 5;
+    bool        include_ns          = 6;
+    string      prefered_nc_version = 7;
 }
 
 // TLS Config
@@ -266,6 +269,13 @@ message Credentials {
     string username = 1;
     string password = 2;
     string token    = 3;
+}
+
+//
+message Sync {
+    bool validate  = 1;
+    GNMISync gnmi  = 2;
+    NCSync netconf = 3;
 }
 
 // WIP

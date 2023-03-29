@@ -109,18 +109,25 @@ datastores: # this creates MAIN datastores
       include-ns: true
     sync:
       validate: false
-      gnmi:
+      nc:
         - name: config
-          paths:
-            - /configure
-          mode: on_change
-          encoding: bytes
+          period: 10s
         - name: state
-          paths:
-            - /state
-          mode: sample
-          sample-interval: 10s
-          encoding: bytes
+          period: 30s
+          paths: 
+            - state
+      # gnmi:
+      #   - name: config
+      #     paths:
+      #       - /configure
+      #     mode: on_change
+      #     encoding: bytes
+      #   - name: state
+      #     paths:
+      #       - /state
+      #     mode: sample
+      #     sample-interval: 10s
+      #     encoding: bytes
   - name: sr2
     schema: 
       name: sros
@@ -139,19 +146,25 @@ datastores: # this creates MAIN datastores
       include-ns: true
     sync:
       validate: false
-      gnmi:
+      # gnmi:
+      #   - name: config
+      #     paths:
+      #       - /configure
+      #     mode: on_change
+      #     encoding: bytes
+      #   - name: state
+      #     paths:
+      #       - /state
+      #     mode: sample
+      #     sample-interval: 10s
+      #     encoding: bytes
+      nc:
         - name: config
-          paths:
-            - /configure
-          mode: on_change
-          encoding: bytes
+          period: 10s
         - name: state
-          paths:
-            - /state
-          mode: sample
-          sample-interval: 10s
-          encoding: bytes
-
+          period: 30s
+          paths: 
+            - state
 # remote schema server details
 schema-server:
   # schema server remote address
