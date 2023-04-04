@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,9 @@ import (
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
 	log "github.com/sirupsen/logrus"
+	"github.com/steiler/yang-parser/xpath"
+	"github.com/steiler/yang-parser/xpath/grammars/expr"
+
 	"google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/prototext"
@@ -236,12 +240,30 @@ func (d *Datastore) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sch
 				Op:   schemapb.UpdateResult_UPDATE,
 			})
 		}
+
 		// updates end
 		cand.m.Lock()
 		cand.deletes = append(cand.deletes, req.GetDelete()...)
 		cand.replaces = append(cand.replaces, replaces...)
 		cand.updates = append(cand.updates, updates...)
 		cand.m.Unlock()
+
+		// validate MUST statements
+		for _, upd := range req.GetUpdate() {
+
+			// TODO these schema responses have been requested already
+			// we should somehow store / cache them?!?!
+			rsp, err := d.validatePath(ctx, upd.GetPath())
+			if err != nil {
+				return nil, err
+			}
+
+			validMusts, err := validateMustStatement(ctx, d, upd.Path, cand.head, rsp)
+			if err != nil {
+				return nil, err
+			}
+			_ = validMusts
+		}
 		return rsp, nil
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "unknown datastore %v", req.GetDatastore().GetType())
@@ -389,11 +411,154 @@ func (d *Datastore) validatePath(ctx context.Context, p *schemapb.Path) (*schema
 		})
 }
 
+func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, headTree *ctree.Tree, rsp *schemapb.GetSchemaResponse) (bool, error) {
+
+	var mustStatements []*schemapb.MustStatement
+	// TODO figure out if a switch is even necessary
+	switch rsp.GetSchema().(type) {
+	case *schemapb.GetSchemaResponse_Container:
+		// noop
+		return true, nil
+	case *schemapb.GetSchemaResponse_Leaflist:
+		// noop
+		return true, nil
+	case *schemapb.GetSchemaResponse_Field:
+		// continue with execution
+		mustStatements = rsp.GetField().MustStatements
+	}
+
+	for _, must := range mustStatements {
+		// extract actual must statement
+		exprStr := must.Statement
+		// init a ProgramBuilder
+		prgbuilder := xpath.NewProgBuilder(exprStr)
+		// init an ExpressionLexer
+		lexer := expr.NewExprLex(exprStr, prgbuilder, nil)
+		// parse the provided Must-Expression
+		lexer.Parse()
+		prog, err := lexer.CreateProgram(exprStr)
+		if err != nil {
+			return false, err
+		}
+
+		// init actualPath with the updates element path
+		// this will be forwarded with the must expressions paths
+		actualPath := p.Elem
+		// resulting program instruction set, with paths resolved to concrete
+		// values. This is to avoid having the must expression validation implementation
+		// navigate the tree
+		prgBldr := xpath.NewProgBuilder(exprStr)
+
+		// iterate the Program instructions and adjust it
+		for _, inst := range prog {
+			instName := inst.String()
+			switch {
+			case strings.HasPrefix(instName, "pathOperPush\t. (2e)"):
+				// all good this is the actual node
+				fmt.Printf("    pathOperPush (.): %s\n", inst.String())
+				// noop
+			case strings.HasPrefix(instName, "pathOperPush\t.."):
+				// reduce the path by the last element
+				fmt.Printf("    pathOperPush (..): FROM %s\n", inst.String())
+				actualPath = actualPath[:len(p.Elem)-1]
+			case strings.HasPrefix(instName, "nameTestPush"):
+				// append new element to the path
+				fmt.Printf("    nameTestPush: %s\n", inst.String())
+				r, _ := regexp.Compile(".*{.* (.*)}")
+				n := r.FindStringSubmatch(instName)
+				actualPath = append(actualPath, &schemapb.PathElem{Name: n[1]})
+			case strings.HasPrefix(instName, "evalLocPath"):
+				// resolve path
+				fmt.Printf("     evalLocPath: %s\n", inst.String())
+
+				ParentSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath[:len(actualPath)-1]})
+				if err != nil {
+					return false, err
+				}
+				// TODO if len(actualPath) == 0 error
+				// TODO is container ?
+				isKey := false
+				keyVal := ""
+				if ParentSchema != nil {
+					for _, k := range ParentSchema.GetContainer().Keys {
+						if actualPath[len(actualPath)-1].Name == k.Name {
+							actualPath = actualPath[:len(actualPath)-1]
+							isKey = true
+							keyVal = actualPath[len(actualPath)-1].Key[k.Name]
+						}
+					}
+				}
+
+				completePath, err := utils.CompletePath(nil, &schemapb.Path{Elem: actualPath})
+				if err != nil {
+					return false, err
+				}
+
+				if isKey {
+					fmt.Println("RESOLVED: " + keyVal)
+					prgBldr.CodeLiteral(keyVal)
+				} else {
+					_, ParentIsCont := ParentSchema.Schema.(*schemapb.GetSchemaResponse_Container)
+					ActualSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath})
+					if err != nil {
+						return false, err
+					}
+					_, actualIsContainer := ActualSchema.Schema.(*schemapb.GetSchemaResponse_Container)
+					if actualIsContainer && ParentIsCont {
+						foo := headTree.Get(completePath)
+						if foo == nil {
+							// it is save to fail already
+							return false, fmt.Errorf("%s", must.Error)
+						} else {
+							prgBldr.PushBool(true)
+						}
+					} else {
+						foo := headTree.GetLeafValue(completePath).(*schemapb.TypedValue)
+						fmt.Println("RESOLVED: " + foo.GetStringVal())
+						prgBldr.CodeLiteral(foo.GetStringVal())
+					}
+				}
+				// reset the actualPath to the updates element Path, for the next
+				// referenced path that needs to be build
+				actualPath = p.Elem
+			case strings.HasPrefix(instName, "locPathExists"):
+				// check path existence
+				fmt.Printf("locPathExists: %s\n", inst.String())
+			default:
+				fmt.Printf("Default: %s\n", inst.String())
+				prgBldr.AddInstruction(inst)
+			}
+		}
+
+		// TODO: Remove, was just for dev support
+		fmt.Println("OLD:")
+		machineOld := xpath.NewMachine(exprStr, prog, "exprMachine")
+		fmt.Println(machineOld.PrintMachine())
+
+		newP, err := prgBldr.GetMainProg()
+		if err != nil {
+			return false, err
+		}
+		machine := xpath.NewMachine(exprStr, newP, "exprMachine")
+		res1 := xpath.NewCtxFromMach(machine, nil).EnableValidation().Run()
+
+		fmt.Println("New:")
+		fmt.Println(machine.PrintMachine())
+
+		result, err := res1.GetBoolResult()
+		if !result || err != nil {
+			if err == nil {
+				err = fmt.Errorf(must.Error)
+			}
+			return result, err
+		}
+
+	}
+	return true, nil
+}
+
 func validateFieldValue(f *schemapb.LeafSchema, v any) error {
 	// TODO: eval must statements
-	for _, must := range f.MustStatements {
-		_ = must
-	}
 	return validateLeafTypeValue(f.GetType(), v)
 }
 
