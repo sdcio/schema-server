@@ -24,6 +24,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.14.5
 )
 
+replace github.com/steiler/yang-parser v0.0.0-20230403115201-914d55f67953 => /home/mava/projects/yang-parser
+
 require (
 	cloud.google.com/go v0.110.0 // indirect
 	cloud.google.com/go/compute v1.18.0 // indirect
@@ -145,6 +147,7 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
+	github.com/steiler/yang-parser v0.0.0-20230403115201-914d55f67953 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/zealic/xignore v0.3.3 // indirect

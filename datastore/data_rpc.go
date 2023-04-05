@@ -452,6 +452,12 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 		// iterate the Program instructions and adjust it
 		for _, inst := range prog {
 			instName := inst.String()
+			// switch on the instructions (instruction names).
+			// all the operations that work on the actual data tree, we replace
+			// pathOperPush (with . or ..) as well as nameTestPush with a path elem will
+			// be applied to the actualPath which is initially set to the path of the element we're checking.
+			// the evalLocPath will finally resolve the previously build up path operation by querying the tree
+			// and push the resolved literal value unto the stack.
 			switch {
 			case strings.HasPrefix(instName, "pathOperPush\t. (2e)"):
 				// all good this is the actual node
@@ -460,7 +466,7 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 			case strings.HasPrefix(instName, "pathOperPush\t.."):
 				// reduce the path by the last element
 				fmt.Printf("    pathOperPush (..): FROM %s\n", inst.String())
-				actualPath = actualPath[:len(p.Elem)-1]
+				actualPath = actualPath[:len(actualPath)-1]
 			case strings.HasPrefix(instName, "nameTestPush"):
 				// append new element to the path
 				fmt.Printf("    nameTestPush: %s\n", inst.String())
@@ -498,24 +504,34 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 					fmt.Println("RESOLVED: " + keyVal)
 					prgBldr.CodeLiteral(keyVal)
 				} else {
-					_, ParentIsCont := ParentSchema.Schema.(*schemapb.GetSchemaResponse_Container)
-					ActualSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath})
+					actualPathSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath})
 					if err != nil {
 						return false, err
 					}
-					_, actualIsContainer := ActualSchema.Schema.(*schemapb.GetSchemaResponse_Container)
-					if actualIsContainer && ParentIsCont {
+					_, actualIsContainer := actualPathSchema.Schema.(*schemapb.GetSchemaResponse_Container)
+					if actualIsContainer {
+						// if it is a container, it is some sort of existence check
 						foo := headTree.Get(completePath)
 						if foo == nil {
-							// it is save to fail already
-							return false, fmt.Errorf("%s", must.Error)
+							// so if it does not exist, push false
+							prgBldr.PushBool(false)
 						} else {
+							// so if it does exist, push true
 							prgBldr.PushBool(true)
 						}
 					} else {
-						foo := headTree.GetLeafValue(completePath).(*schemapb.TypedValue)
-						fmt.Println("RESOLVED: " + foo.GetStringVal())
-						prgBldr.CodeLiteral(foo.GetStringVal())
+						// if it is a Leaf, resolve to the actual value
+						lv := headTree.GetLeafValue(completePath)
+						var foo *schemapb.TypedValue = nil
+						if lv != nil {
+							foo = headTree.GetLeafValue(completePath).(*schemapb.TypedValue)
+						}
+						if foo == nil {
+							prgBldr.PushNotFound()
+						} else {
+							fmt.Println("RESOLVED: " + foo.GetStringVal())
+							prgBldr.CodeLiteral(foo.GetStringVal())
+						}
 					}
 				}
 				// reset the actualPath to the updates element Path, for the next
@@ -525,6 +541,8 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 				// check path existence
 				fmt.Printf("locPathExists: %s\n", inst.String())
 			default:
+				// if it is none of the above cases, we are save to push the operation
+				// ver to the new stack. Keeping it as is.
 				fmt.Printf("Default: %s\n", inst.String())
 				prgBldr.AddInstruction(inst)
 			}
