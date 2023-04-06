@@ -1,8 +1,10 @@
 *** Settings ***
+Resource          ../keywords/server.robot
+Resource          ../keywords/client.robot
 Library           OperatingSystem
 Library           String
 Library           Process
-Suite Setup       Setup
+Suite Setup       Setup    True    ${server-bin}    ${schema-server-config}    ${schema-server-process-alias}    ${schema-server-stderr}    ${data-server-config}    ${data-server-process-alias}    ${data-server-stderr}   
 Suite Teardown    Teardown
 
 *** Variables ***
@@ -23,16 +25,17 @@ ${srlinux1-schema-version}    22.11.2
 ${srlinux1-schema-Vendor}    Nokia
 
 
+
 # internal vars
 ${schema-server-process-alias}    ssa
+${schema-server-stderr}    /tmp/ss-out
 ${data-server-process-alias}    dsa
 ${data-server-stderr}    /tmp/ds-out
 
 
-
 *** Test Cases ***
 Check Server State
-    CheckServerState
+    CheckServerState    ${schema-server-process-alias}    ${data-server-process-alias}
 
 Set system0 admin-state disable
     LogMustStatements    ${srlinux1-schema-name}    ${srlinux1-schema-version}    ${srlinux1-schema-vendor}    interface[name=system0]/admin-state
@@ -121,81 +124,12 @@ Set breakout-port num to 2 and port-speed to 100G
 
 
 
+Set interface ethernet l2cp-transparency lldp tunnel true
+    LogMustStatements    ${srlinux1-schema-name}    ${srlinux1-schema-version}    ${srlinux1-schema-vendor}    interface[name=ethernet-1/1]/ethernet/l2cp-transparency/lldp/tunnel
 
-
-
-*** Keywords ***
-Setup
-    [Documentation]    Starts schema and data server. Waits for the dataserver to begin sync before returning
-    Start Process    ${server-bin}  -c     ${schema-server-config}    alias=${schema-server-process-alias}
-    Start Process    ${server-bin}  -c     ${data-server-config}    alias=${data-server-process-alias}    stderr=${data-server-stderr}
-    Wait Until Keyword Succeeds    180x    3s    WaitForOutput    ${data-server-stderr}    sync
-
-Teardown
-    [Documentation]    Stop all the started schema-server, data-server and client processes 
-    Terminate All Processes
-
-CheckServerState
-    [Documentation]    Check that schema-server and data-server are still running
-    Process Should Be Running    handle=${schema-server-process-alias}    error_message="schema-server failed"
-    Process Should Be Running    handle=${data-server-process-alias}    error_message="data-server failed"
-
-CreateCandidate
-    [Arguments]    ${datastore}    ${candidate}
-    ${result} =    Run Process    ${client-bin}     -a    ${data-server-ip}:${data-server-port}    datastore    create    --ds    ${datastore}    --candidate    ${candidate}
-    RETURN    ${result}
-
-DeleteCandidate
-    [Arguments]    ${datastore}    ${candidate}
-    ${result} =    Run Process    ${client-bin}     -a    ${data-server-ip}:${data-server-port}    datastore    delete    --ds    ${datastore}    --candidate    ${candidate}
-    RETURN    ${result}
-
-Commit
-    [Documentation]    Performs a commit on the given datastore/candidate and returns the Process Result object https://robotframework.org/robotframework/latest/libraries/Process.html#Result%20object
-    [Arguments]    ${datastore}    ${candidate}
-    ${result} =    Run Process    ${client-bin}     -a    ${data-server-ip}:${data-server-port}    datastore    commit    --ds    ${datastore}    --candidate    ${candidate}
-    RETURN    ${result}
-
-Set
-    [Documentation]    Applies to the candidate of the given datastore the provided update
-    [Arguments]    ${datastore}    ${candidate}    ${update}
-    ${result} =    Run Process    ${client-bin}     -a    ${data-server-ip}:${data-server-port}    data    set    --ds    ${datastore}    --candidate    ${candidate}    --update    ${update}
-    Log    ${result.stdout}
-    Log    ${result.stderr}
-    RETURN    ${result}
-
-GetSchema
-    [Arguments]    ${name}    ${version}    ${vendor}    ${path}
-    ${result} =    Run Process    ${client-bin}    -a    ${schema-server-ip}:${schema-server-port}    schema    get    --name    ${name}    --version    ${version}    --vendor    ${vendor}    --path    ${path}    
-    RETURN    ${result}
-
-ExtractResponse
-    [Documentation]    Takes the output of the client binary and returns just the response part, stripping the request
-    [Arguments]    ${output}
-    @{split} =	Split String	${output}    response:
-    RETURN    ${split}[1]
-
-ExtractMustStatements
-    [Arguments]    ${input}
-    ${matches} =	Get Regexp Matches	${input}    must_statements:\\s*\{[\\s\\S]*?\}    flags=MULTILINE | IGNORECASE
-    RETURN    ${matches}
-
-LogMustStatements
-    [Arguments]    ${name}    ${version}    ${vendor}    ${path}
-    ${schema} =     GetSchema     ${name}    ${version}    ${vendor}    ${path}
-    ${msts} =    ExtractMustStatements    ${schema.stdout}
-    FOR    ${item}    IN    @{msts}
-        Log    ${item}
-    END
-
-WaitForOutput
-    [Arguments]    ${file}    ${pattern}
-    ${ret} =	Grep File     ${file}    ${pattern}
-    ${cnt}=    Get length    ${ret}
-    IF    ${cnt} > 0
-        RETURN
-    ELSE
-        Fail    Pattern (${pattern}) not found in file ${file}.    
-    END    
+    CreateCandidate    ${srlinux1-name}    ${srlinux1-candidate}
     
+    ${result} =     Set    ${srlinux1-name}    ${srlinux1-candidate}    interface[name=ethernet-1/1]/ethernet/l2cp-transparency/lldp/tunnel:::true
+    Should Be Equal As Integers    ${result.rc}    0
 
+    DeleteCandidate    ${srlinux1-name}    ${srlinux1-candidate}

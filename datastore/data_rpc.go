@@ -449,6 +449,8 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 		// navigate the tree
 		prgBldr := xpath.NewProgBuilder(exprStr)
 
+		actualPredicat := 1
+
 		// iterate the Program instructions and adjust it
 		for _, inst := range prog {
 			instName := inst.String()
@@ -473,6 +475,8 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 				r, _ := regexp.Compile(".*{.* (.*)}")
 				n := r.FindStringSubmatch(instName)
 				actualPath = append(actualPath, &schemapb.PathElem{Name: n[1]})
+			case strings.HasPrefix(instName, "evalLocPath(PredStart)"):
+				// continue, action will be performed in evalsubMachine
 			case strings.HasPrefix(instName, "evalLocPath"):
 				// resolve path
 				fmt.Printf("     evalLocPath: %s\n", inst.String())
@@ -540,6 +544,25 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 			case strings.HasPrefix(instName, "locPathExists"):
 				// check path existence
 				fmt.Printf("locPathExists: %s\n", inst.String())
+			case strings.HasPrefix(instName, "evalSubMachine"):
+				subMachExpr := xpath.GetSubExpr(exprStr, actualPredicat)
+				// subMachExpr are encapsulated in square brackets e.g. "[ <subMachExpr> ]"
+				subMachExpr = strings.TrimLeft(subMachExpr, "[")
+				subMachExpr = strings.TrimRight(subMachExpr, "]")
+
+				prgbuilderSub := xpath.NewProgBuilder(subMachExpr)
+				lexerSub := expr.NewExprLex(subMachExpr, prgbuilderSub, nil)
+				// parse the provided Must-Expression
+				lexerSub.Parse()
+
+				p, err := prgbuilderSub.GetMainProg()
+				if err != nil {
+					return false, err
+				}
+
+				_ = p
+
+				actualPredicat++
 			default:
 				// if it is none of the above cases, we are save to push the operation
 				// ver to the new stack. Keeping it as is.
