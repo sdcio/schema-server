@@ -11,7 +11,7 @@ Setup
     [Documentation]    Starts schema and data server. Waits for the dataserver to begin sync before returning
     [Arguments]    ${doBuild}    ${server-bin}    ${schema-server-config}    ${schema-server-process-alias}    ${schema-server-stderr}    ${data-server-config}    ${data-server-process-alias}    ${data-server-stderr}
     IF    ${doBuild} == $True
-        Run Process    go    build
+        Run Process    make build
     END
     Start Process    ${server-bin}  -c     ${schema-server-config}    alias=${schema-server-process-alias}        stderr=${schema-server-stderr}
     Start Process    ${server-bin}  -c     ${data-server-config}    alias=${data-server-process-alias}    stderr=${data-server-stderr}
@@ -39,7 +39,6 @@ _CheckOutput
         Fail    Pattern (${pattern}) not found in file ${file}.    
     END    
     
-
 CheckServerState
     [Documentation]    Check that schema-server and data-server are still running
     [Arguments]    ${schema-server-process-alias}    ${data-server-process-alias} 

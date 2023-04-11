@@ -8,8 +8,8 @@ Suite Setup       Setup    True    ${server-bin}    ${schema-server-config}    $
 Suite Teardown    Teardown
 
 *** Variables ***
-${server-bin}    ./schema-server
-${client-bin}    ./client/client
+${server-bin}    ./bin/server
+${client-bin}    ./bin/client
 ${schema-server-config}    ./lab/distributed/schema-server.yaml
 ${data-server-config}    ./lab/distributed/data-server.yaml
 ${schema-server-ip}    127.0.0.1
