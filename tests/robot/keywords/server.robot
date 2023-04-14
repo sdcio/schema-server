@@ -11,7 +11,8 @@ Setup
     [Documentation]    Starts schema and data server. Waits for the dataserver to begin sync before returning
     [Arguments]    ${doBuild}    ${server-bin}    ${schema-server-config}    ${schema-server-process-alias}    ${schema-server-stderr}    ${data-server-config}    ${data-server-process-alias}    ${data-server-stderr}
     IF    ${doBuild} == $True
-        Run Process    make build
+        ${result} =     Run Process    make     build
+        Log Many	stdout: ${result.stdout}	stderr: ${result.stderr}
     END
     Start Process    ${server-bin}  -c     ${schema-server-config}    alias=${schema-server-process-alias}        stderr=${schema-server-stderr}
     Start Process    ${server-bin}  -c     ${data-server-config}    alias=${data-server-process-alias}    stderr=${data-server-stderr}

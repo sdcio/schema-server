@@ -4,8 +4,8 @@ Resource          ../keywords/client.robot
 Library           OperatingSystem
 Library           String
 Library           Process
-Suite Setup       Setup    True    ${server-bin}    ${schema-server-config}    ${schema-server-process-alias}    ${schema-server-stderr}    ${data-server-config}    ${data-server-process-alias}    ${data-server-stderr}   
-Suite Teardown    Teardown
+#Suite Setup       Setup    True    ${server-bin}    ${schema-server-config}    ${schema-server-process-alias}    ${schema-server-stderr}    ${data-server-config}    ${data-server-process-alias}    ${data-server-stderr}   
+#Suite Teardown    Teardown
 
 *** Variables ***
 ${server-bin}    ./bin/server

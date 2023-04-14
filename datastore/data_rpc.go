@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -441,150 +440,13 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 			return false, err
 		}
 
-		// init actualPath with the updates element path
-		// this will be forwarded with the must expressions paths
-		actualPath := p.Elem
-		// resulting program instruction set, with paths resolved to concrete
-		// values. This is to avoid having the must expression validation implementation
-		// navigate the tree
-		prgBldr := xpath.NewProgBuilder(exprStr)
-
-		actualPredicat := 1
-
-		// iterate the Program instructions and adjust it
-		for _, inst := range prog {
-			instName := inst.String()
-			// switch on the instructions (instruction names).
-			// all the operations that work on the actual data tree, we replace
-			// pathOperPush (with . or ..) as well as nameTestPush with a path elem will
-			// be applied to the actualPath which is initially set to the path of the element we're checking.
-			// the evalLocPath will finally resolve the previously build up path operation by querying the tree
-			// and push the resolved literal value unto the stack.
-			switch {
-			case strings.HasPrefix(instName, "pathOperPush\t. (2e)"):
-				// all good this is the actual node
-				fmt.Printf("    pathOperPush (.): %s\n", inst.String())
-				// noop
-			case strings.HasPrefix(instName, "pathOperPush\t.."):
-				// reduce the path by the last element
-				fmt.Printf("    pathOperPush (..): FROM %s\n", inst.String())
-				actualPath = actualPath[:len(actualPath)-1]
-			case strings.HasPrefix(instName, "nameTestPush"):
-				// append new element to the path
-				fmt.Printf("    nameTestPush: %s\n", inst.String())
-				r, _ := regexp.Compile(".*{.* (.*)}")
-				n := r.FindStringSubmatch(instName)
-				actualPath = append(actualPath, &schemapb.PathElem{Name: n[1]})
-			case strings.HasPrefix(instName, "evalLocPath(PredStart)"):
-				// continue, action will be performed in evalsubMachine
-			case strings.HasPrefix(instName, "evalLocPath"):
-				// resolve path
-				fmt.Printf("     evalLocPath: %s\n", inst.String())
-
-				ParentSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath[:len(actualPath)-1]})
-				if err != nil {
-					return false, err
-				}
-				// TODO if len(actualPath) == 0 error
-				// TODO is container ?
-				isKey := false
-				keyVal := ""
-				if ParentSchema != nil {
-					for _, k := range ParentSchema.GetContainer().Keys {
-						if actualPath[len(actualPath)-1].Name == k.Name {
-							actualPath = actualPath[:len(actualPath)-1]
-							isKey = true
-							keyVal = actualPath[len(actualPath)-1].Key[k.Name]
-						}
-					}
-				}
-
-				completePath, err := utils.CompletePath(nil, &schemapb.Path{Elem: actualPath})
-				if err != nil {
-					return false, err
-				}
-
-				if isKey {
-					fmt.Println("RESOLVED: " + keyVal)
-					prgBldr.CodeLiteral(keyVal)
-				} else {
-					actualPathSchema, err := d.validatePath(ctx, &schemapb.Path{Elem: actualPath})
-					if err != nil {
-						return false, err
-					}
-					_, actualIsContainer := actualPathSchema.Schema.(*schemapb.GetSchemaResponse_Container)
-					if actualIsContainer {
-						// if it is a container, it is some sort of existence check
-						foo := headTree.Get(completePath)
-						if foo == nil {
-							// so if it does not exist, push false
-							prgBldr.PushBool(false)
-						} else {
-							// so if it does exist, push true
-							prgBldr.PushBool(true)
-						}
-					} else {
-						// if it is a Leaf, resolve to the actual value
-						lv := headTree.GetLeafValue(completePath)
-						var foo *schemapb.TypedValue = nil
-						if lv != nil {
-							foo = headTree.GetLeafValue(completePath).(*schemapb.TypedValue)
-						}
-						if foo == nil {
-							prgBldr.PushNotFound()
-						} else {
-							fmt.Println("RESOLVED: " + foo.GetStringVal())
-							prgBldr.CodeLiteral(foo.GetStringVal())
-						}
-					}
-				}
-				// reset the actualPath to the updates element Path, for the next
-				// referenced path that needs to be build
-				actualPath = p.Elem
-			case strings.HasPrefix(instName, "locPathExists"):
-				// check path existence
-				fmt.Printf("locPathExists: %s\n", inst.String())
-			case strings.HasPrefix(instName, "evalSubMachine"):
-				subMachExpr := xpath.GetSubExpr(exprStr, actualPredicat)
-				// subMachExpr are encapsulated in square brackets e.g. "[ <subMachExpr> ]"
-				subMachExpr = strings.TrimLeft(subMachExpr, "[")
-				subMachExpr = strings.TrimRight(subMachExpr, "]")
-
-				prgbuilderSub := xpath.NewProgBuilder(subMachExpr)
-				lexerSub := expr.NewExprLex(subMachExpr, prgbuilderSub, nil)
-				// parse the provided Must-Expression
-				lexerSub.Parse()
-
-				p, err := prgbuilderSub.GetMainProg()
-				if err != nil {
-					return false, err
-				}
-
-				_ = p
-
-				actualPredicat++
-			default:
-				// if it is none of the above cases, we are save to push the operation
-				// ver to the new stack. Keeping it as is.
-				fmt.Printf("Default: %s\n", inst.String())
-				prgBldr.AddInstruction(inst)
-			}
-		}
+		machine := xpath.NewMachine(exprStr, prog, "exprMachine")
 
 		// TODO: Remove, was just for dev support
-		fmt.Println("OLD:")
-		machineOld := xpath.NewMachine(exprStr, prog, "exprMachine")
-		fmt.Println(machineOld.PrintMachine())
-
-		newP, err := prgBldr.GetMainProg()
-		if err != nil {
-			return false, err
-		}
-		machine := xpath.NewMachine(exprStr, newP, "exprMachine")
-		res1 := xpath.NewCtxFromMach(machine, nil).EnableValidation().Run()
-
-		fmt.Println("New:")
+		fmt.Println("Machine:")
 		fmt.Println(machine.PrintMachine())
+
+		res1 := xpath.NewCtxFromCurrent(machine, p.Elem, headTree, &schemapb.Schema{Name: d.config.Schema.Name, Version: d.config.Schema.Version, Vendor: d.config.Schema.Vendor}, d.schemaClient, ctx).EnableValidation().Run()
 
 		result, err := res1.GetBoolResult()
 		if !result || err != nil {
@@ -597,6 +459,21 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 	}
 	return true, nil
 }
+
+// func schemaPbtoXpathPath(p *schemapb.Path) *xpath.Path {
+// 	xp := &xpath.Path{}
+// 	for _, x := range p.Elem {
+// 		xpe := &xpath.PathElem{
+// 			Name: x.Name,
+// 			Key:  map[string]string{},
+// 		}
+// 		for k, v := range x.Key {
+// 			xpe.Key[k] = v
+// 		}
+// 		xp.Push(xpe)
+// 	}
+// 	return xp
+// }
 
 func validateFieldValue(f *schemapb.LeafSchema, v any) error {
 	// TODO: eval must statements

@@ -17,6 +17,7 @@ require (
 	github.com/scrapli/scrapligo v1.1.7
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
+	github.com/steiler/yang-parser v0.0.0-20230403115201-914d55f67953
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
@@ -147,7 +148,6 @@ require (
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirikothe/gotextfsm v1.0.1-0.20200816110946-6aa2cfd355e4 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
-	github.com/steiler/yang-parser v0.0.0-20230403115201-914d55f67953 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
 	github.com/zealic/xignore v0.3.3 // indirect
