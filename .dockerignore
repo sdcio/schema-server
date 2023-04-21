@@ -2,3 +2,6 @@ bin/
 lab/
 tests/
 proto/*proto
+keys
+*.md
+*.txt
