@@ -2296,6 +2296,8 @@ github.com/steiler/yang-parser v0.0.0-20230424092457-2119c21e3231 h1:aRe6x1Lvg9O
 github.com/steiler/yang-parser v0.0.0-20230424092457-2119c21e3231/go.mod h1:y4sIFSeq/uZSnhvJPlertut228mLRnLeDeTlG+tNPQQ=
 github.com/steiler/yang-parser v0.0.0-20230424093823-f564a2f6527b h1:5fwIvmcDBGA9ljeRqDnZpMwwLoknpiP5Kk1nTXASW1E=
 github.com/steiler/yang-parser v0.0.0-20230424093823-f564a2f6527b/go.mod h1:y4sIFSeq/uZSnhvJPlertut228mLRnLeDeTlG+tNPQQ=
+github.com/steiler/yang-parser v0.0.0-20230425071446-c32251f7798e h1:fVgtDIU8FQhiBtm1moid9XsZb/b5wSKwVdFj3hRlaas=
+github.com/steiler/yang-parser v0.0.0-20230425071446-c32251f7798e/go.mod h1:MSaqcylebxpC9dQKXt158+hnL9WAEWDJK5uYvf8e9Qw=
 github.com/stoewer/go-strcase v1.2.0/go.mod h1:IBiWB2sKIp3wVVQ3Y035++gc+knqhUQag1KpM8ahLw8=
 github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=
 github.com/streadway/amqp v1.0.0/go.mod h1:AZpEONHx3DKn8O/DFsRAY58/XVQiIPMTMB1SddzLXVw=

@@ -123,7 +123,6 @@ Set breakout-port num to 2 and port-speed to 100G
     DeleteCandidate    ${srlinux1-name}    ${srlinux1-candidate}
 
 
-
 Set interface ethernet l2cp-transparency lldp tunnel true
     LogMustStatements    ${srlinux1-schema-name}    ${srlinux1-schema-version}    ${srlinux1-schema-vendor}    interface[name=ethernet-1/1]/ethernet/l2cp-transparency/lldp/tunnel
 
@@ -142,8 +141,19 @@ Set interface ethernet l2cp-transparency lldp tunnel true on lldp true interface
     ${result} =     Set    ${srlinux1-name}    ${srlinux1-candidate}    /system/lldp/interface[name=ethernet-1/1]/admin-state:::enable
     Should Be Equal As Integers    ${result.rc}    0
 
-    ${result} =     Set    ${srlinux1-name}    ${srlinux1-candidate}    interface[name=ethernet-1/1]/ethernet/l2cp-transparency/lldp/tunnel:::true
+    ${result} =     Set    ${srlinux1-name}    ${srlinux1-candidate}    /interface[name=ethernet-1/1]/ethernet/l2cp-transparency/lldp/tunnel:::true
     Should Be Equal As Integers    ${result.rc}    1
     Should Contain    ${result.stderr}    this interface must not have lldp enabled
+
+    DeleteCandidate    ${srlinux1-name}    ${srlinux1-candidate}
+
+Set bfd for non existing subinterface
+    LogMustStatements    ${srlinux1-schema-name}    ${srlinux1-schema-version}    ${srlinux1-schema-vendor}    /bfd/subinterface/id
+
+    CreateCandidate    ${srlinux1-name}    ${srlinux1-candidate}
+    
+    ${result} =     Set    ${srlinux1-name}    ${srlinux1-candidate}    /bfd/subinterface/id:::ethernet-1/1.26
+    Should Be Equal As Integers    ${result.rc}    1
+    Should Contain    ${result.stderr}    Must be an existing subinterface name
 
     DeleteCandidate    ${srlinux1-name}    ${srlinux1-candidate}

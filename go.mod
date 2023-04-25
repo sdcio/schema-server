@@ -17,7 +17,7 @@ require (
 	github.com/scrapli/scrapligo v1.1.7
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/pflag v1.0.5
-	github.com/steiler/yang-parser v0.0.0-20230424093823-f564a2f6527b
+	github.com/steiler/yang-parser v0.0.0-20230425071446-c32251f7798e
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
@@ -25,7 +25,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-//replace github.com/steiler/yang-parser v0.0.0-20230403115201-914d55f67953 => /home/mava/projects/yang-parser
+//replace github.com/steiler/yang-parser v0.0.0-20230425071446-c32251f7798e => /home/mava/projects/yang-parser
 
 require (
 	cloud.google.com/go v0.110.0 // indirect
