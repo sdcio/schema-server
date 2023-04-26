@@ -164,19 +164,18 @@ func (d *Datastore) Set(ctx context.Context, req *schemapb.SetDataRequest) (*sch
 		// debugging
 		if log.GetLevel() >= log.DebugLevel {
 			for _, upd := range replaces {
-				log.Debugf("expanded replace:\n", prototext.Format(upd))
+				log.Debugf("expanded replace:\n%s", prototext.Format(upd))
 			}
 			for _, upd := range updates {
-				log.Debugf("expanded update:\n", prototext.Format(upd))
+				log.Debugf("expanded update:\n%s", prototext.Format(upd))
 			}
 		}
-		//
 
 		// validate individual updates
 		for _, del := range req.GetDelete() {
 			_, err = d.validatePath(ctx, del)
 			if err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, "%w", err)
+				return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 			}
 		}
 
@@ -413,17 +412,13 @@ func (d *Datastore) validatePath(ctx context.Context, p *schemapb.Path) (*schema
 func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, headTree *ctree.Tree, rsp *schemapb.GetSchemaResponse) (bool, error) {
 
 	var mustStatements []*schemapb.MustStatement
-	// TODO figure out if a switch is even necessary
 	switch rsp.GetSchema().(type) {
 	case *schemapb.GetSchemaResponse_Container:
-		// noop
-		return true, nil
+		mustStatements = rsp.GetContainer().GetMustStatements()
 	case *schemapb.GetSchemaResponse_Leaflist:
-		// noop
-		return true, nil
+		mustStatements = rsp.GetLeaflist().GetMustStatements()
 	case *schemapb.GetSchemaResponse_Field:
-		// continue with execution
-		mustStatements = rsp.GetField().MustStatements
+		mustStatements = rsp.GetField().GetMustStatements()
 	}
 
 	for _, must := range mustStatements {
@@ -440,14 +435,13 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 			return false, err
 		}
 
-		machine := xpath.NewMachine(exprStr, prog, "exprMachine")
+		machine := xpath.NewMachine(exprStr, prog, exprStr)
+		// create a context that takes the machine, but also also the references to the actual yang entrity.
+		schema := &schemapb.Schema{Name: d.config.Schema.Name, Version: d.config.Schema.Version, Vendor: d.config.Schema.Vendor}
+		// run the must statement evaluation virtual machine
+		res1 := xpath.NewCtxFromCurrent(machine, p.Elem, headTree, schema, d.schemaClient, ctx).EnableValidation().Run()
 
-		// TODO: Remove, was just for dev support
-		fmt.Println("Machine:")
-		fmt.Println(machine.PrintMachine())
-
-		res1 := xpath.NewCtxFromCurrent(machine, p.Elem, headTree, &schemapb.Schema{Name: d.config.Schema.Name, Version: d.config.Schema.Version, Vendor: d.config.Schema.Vendor}, d.schemaClient, ctx).EnableValidation().Run()
-
+		// retrieve the boolean result of the execution
 		result, err := res1.GetBoolResult()
 		if !result || err != nil {
 			if err == nil {
@@ -455,25 +449,9 @@ func validateMustStatement(ctx context.Context, d *Datastore, p *schemapb.Path, 
 			}
 			return result, err
 		}
-
 	}
 	return true, nil
 }
-
-// func schemaPbtoXpathPath(p *schemapb.Path) *xpath.Path {
-// 	xp := &xpath.Path{}
-// 	for _, x := range p.Elem {
-// 		xpe := &xpath.PathElem{
-// 			Name: x.Name,
-// 			Key:  map[string]string{},
-// 		}
-// 		for k, v := range x.Key {
-// 			xpe.Key[k] = v
-// 		}
-// 		xp.Push(xpe)
-// 	}
-// 	return xp
-// }
 
 func validateFieldValue(f *schemapb.LeafSchema, v any) error {
 	// TODO: eval must statements
@@ -942,7 +920,7 @@ func (d *Datastore) expandContainerValue(ctx context.Context, p *schemapb.Path, 
 				}
 				upds = append(upds, upd)
 			case *schemapb.LeafListSchema: // leaflist
-				log.Debugf("TODO: handling leafList", item.Name)
+				log.Debugf("TODO: handling leafList %s", item.Name)
 			case string: // child container
 				log.Debugf("handling child container %s", item)
 				np := proto.Clone(p).(*schemapb.Path)
