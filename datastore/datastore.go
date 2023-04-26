@@ -281,12 +281,6 @@ func (d *Datastore) Sync(ctx context.Context) {
 	// this can be made a config knob, number of concurrent writes
 	sem := semaphore.NewWeighted(1)
 	go d.sbi.Sync(ctx, d.config.Sync, d.synCh)
-	// go func() {
-	// 	for {
-	// 		<-time.After(2 * time.Minute)
-	// 		log.Infof("count: %d", d.main.config.Count())
-	// 	}
-	// }()
 	var err error
 	for {
 		select {
@@ -469,7 +463,6 @@ func (d *Datastore) storeSyncMsg(ctx context.Context, syncup *target.SyncUpdate,
 }
 
 // helper for GetSchema
-
 func (d *Datastore) getSchema(ctx context.Context, p *schemapb.Path) (*schemapb.GetSchemaResponse, error) {
 	return d.schemaClient.GetSchema(ctx, &schemapb.GetSchemaRequest{
 		Path: p,

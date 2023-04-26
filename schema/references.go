@@ -173,7 +173,7 @@ func hasRelativePathElem(p *schemapb.Path) bool {
 func hasRelativeKeys(p *schemapb.Path) bool {
 	for _, pe := range p.GetElem() {
 		for _, v := range pe.GetKey() {
-			if strings.Contains(v, "..") {
+			if strings.Contains(v, "..") || strings.Contains(v, "current()") {
 				return true
 			}
 		}
