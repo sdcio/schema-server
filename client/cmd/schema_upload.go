@@ -13,7 +13,7 @@ import (
 var schemaUploadCmd = &cobra.Command{
 	Use:   "upload",
 	Short: "A brief description of your command",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 		schemaClient, err := createSchemaClient(ctx, addr)

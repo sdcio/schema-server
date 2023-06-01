@@ -17,7 +17,7 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "delete schema",
 
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 		schemaClient, err := createSchemaClient(ctx, addr)

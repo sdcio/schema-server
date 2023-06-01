@@ -26,45 +26,25 @@ import (
 )
 
 func (s *Server) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (*schemapb.GetSchemaResponse, error) {
+	log.Debugf("received GetSchemaRequest: %v", req)
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
+	pes := utils.ToStrings(req.GetPath(), false, true)
+
 	sc, ok := s.schemas[fmt.Sprintf("%s@%s@%s", reqSchema.Name, reqSchema.Vendor, reqSchema.Version)]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	pes := utils.ToStrings(req.GetPath(), false, true)
 	e, err := sc.GetEntry(pes)
 	if err != nil {
 		return nil, err
 	}
-
-	o := schema.ObjectFromYEntry(e, req.GetWithDescription())
-	var resp *schemapb.GetSchemaResponse
-	switch o := o.(type) {
-	case *schemapb.ContainerSchema:
-		resp = &schemapb.GetSchemaResponse{
-			Schema: &schemapb.GetSchemaResponse_Container{
-				Container: o,
-			},
-		}
-	case *schemapb.LeafListSchema:
-		resp = &schemapb.GetSchemaResponse{
-			Schema: &schemapb.GetSchemaResponse_Leaflist{
-				Leaflist: o,
-			},
-		}
-	case *schemapb.LeafSchema:
-		resp = &schemapb.GetSchemaResponse{
-			Schema: &schemapb.GetSchemaResponse_Field{
-				Field: o,
-			},
-		}
-	default:
-		return nil, fmt.Errorf("unknown schema item: %T", o)
+	resp := &schemapb.GetSchemaResponse{
+		Schema: schema.SchemaElemFromYEntry(e, req.GetWithDescription()),
 	}
 	log.Tracef("schema response: %v", resp)
 	return resp, nil
@@ -147,7 +127,7 @@ func (s *Server) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaReq
 	// write
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[sc.UniqueName()] = sc
+	s.schemas[sc.UniqueName("")] = sc
 	scrsp := req.GetSchema()
 
 	return &schemapb.CreateSchemaResponse{
@@ -172,7 +152,7 @@ func (s *Server) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaReq
 	}
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[nsc.UniqueName()] = nsc
+	s.schemas[nsc.UniqueName("")] = nsc
 	return &schemapb.ReloadSchemaResponse{}, nil
 }
 
@@ -434,7 +414,7 @@ LOOP:
 	}
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[sc.UniqueName()] = sc
+	s.schemas[sc.UniqueName("")] = sc
 	return nil
 }
 
@@ -466,36 +446,14 @@ func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schema
 				if !ok {
 					return
 				}
-				o := schema.ObjectFromYEntry(e, req.GetWithDescription())
-				switch o := o.(type) {
-				case *schemapb.ContainerSchema:
-					o.Description = ""
-					err = stream.Send(
-						&schemapb.GetSchemaResponse{
-							Schema: &schemapb.GetSchemaResponse_Container{
-								Container: o,
-							},
-						})
-				case *schemapb.LeafListSchema:
-					o.Description = ""
-					err = stream.Send(&schemapb.GetSchemaResponse{
-						Schema: &schemapb.GetSchemaResponse_Leaflist{
-							Leaflist: o,
-						},
-					})
-				case *schemapb.LeafSchema:
-					o.Description = ""
-					err = stream.Send(&schemapb.GetSchemaResponse{
-						Schema: &schemapb.GetSchemaResponse_Field{
-							Field: o,
-						},
-					})
-				}
+				sce := schema.SchemaElemFromYEntry(e, req.GetWithDescription())
+				err = stream.Send(&schemapb.GetSchemaResponse{
+					Schema: sce,
+				})
 				if err != nil {
 					log.Errorf("%v", err)
 					return
 				}
-				// return nil, fmt.Errorf("unknown schema item: %T", o)
 			}
 		}
 	}()

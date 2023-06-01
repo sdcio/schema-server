@@ -59,18 +59,3 @@ func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServer
 	}
 	return schemapb.NewSchemaServerClient(cc), nil
 }
-
-func createDataClient(ctx context.Context, addr string) (schemapb.DataServerClient, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	cc, err := grpc.DialContext(ctx, addr,
-		grpc.WithBlock(),
-		grpc.WithTransportCredentials(
-			insecure.NewCredentials(),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return schemapb.NewDataServerClient(cc), nil
-}

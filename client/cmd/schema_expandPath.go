@@ -21,7 +21,7 @@ var schemaExpandPathCmd = &cobra.Command{
 	Aliases:      []string{"expand"},
 	Short:        "given a path returns all sub-paths",
 	SilenceUsage: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		if configOnly && stateOnly {
 			return errors.New("either --config-only or --state-only can be set")
 		}

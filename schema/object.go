@@ -11,14 +11,26 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func ObjectFromYEntry(e *yang.Entry, withDesc bool) any {
+func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) *schemapb.SchemaElem {
 	switch {
 	case e.IsLeaf():
-		return leafFromYEntry(e, withDesc)
+		return &schemapb.SchemaElem{
+			Schema: &schemapb.SchemaElem_Field{
+				Field: leafFromYEntry(e, withDesc),
+			},
+		}
 	case e.IsLeafList():
-		return leafListFromYEntry(e, withDesc)
+		return &schemapb.SchemaElem{
+			Schema: &schemapb.SchemaElem_Leaflist{
+				Leaflist: leafListFromYEntry(e, withDesc),
+			},
+		}
 	default:
-		return containerFromYEntry(e, withDesc)
+		return &schemapb.SchemaElem{
+			Schema: &schemapb.SchemaElem_Container{
+				Container: containerFromYEntry(e, withDesc),
+			},
+		}
 	}
 }
 

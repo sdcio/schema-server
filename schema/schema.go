@@ -1,7 +1,7 @@
 package schema
 
 import (
-	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -52,13 +52,14 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		e := yang.ToEntry(m)
 		sc.root.Dir[e.Name] = e
 	}
-	log.Infof("schema %s building references", sc.UniqueName())
+	log.Infof("schema %s building references", sc.UniqueName(""))
 	err = sc.buildReferencesAnnotation()
 	if err != nil {
 		return nil, err
 	}
 	sc.status = "ok"
-	log.Infof("schema %s parsed in %s", sc.UniqueName(), time.Since(now))
+	log.Infof("schema %s parsed in %s", sc.UniqueName(""), time.Since(now))
+	sc.modules = nil
 	return sc, nil
 }
 
@@ -67,11 +68,14 @@ func (s *Schema) Reload() (*Schema, error) {
 	return NewSchema(s.config)
 }
 
-func (s *Schema) UniqueName() string {
+func (s *Schema) UniqueName(sep string) string {
 	if s == nil {
 		return ""
 	}
-	return fmt.Sprintf("%s@%s@%s", s.config.Name, s.config.Vendor, s.config.Version)
+	if sep == "" {
+		sep = "@"
+	}
+	return strings.Join([]string{s.config.Name, s.config.Vendor, s.config.Version}, sep)
 }
 
 func (s *Schema) Name() string {
@@ -101,4 +105,31 @@ func (s *Schema) Files() []string {
 
 func (s *Schema) Dirs() []string {
 	return s.config.Directories
+}
+
+func (s *Schema) Walk(e *yang.Entry, fn func(ec *yang.Entry) error) error {
+	if e == nil {
+		e = s.root
+	}
+	var err error
+	if e.IsCase() || e.IsChoice() {
+		for _, ee := range e.Dir {
+			err = s.Walk(ee, fn)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	err = fn(e)
+	if err != nil {
+		return err
+	}
+	for _, e := range e.Dir {
+		err = s.Walk(e, fn)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

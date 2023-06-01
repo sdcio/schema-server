@@ -14,12 +14,7 @@ grpc-server:
     enabled: true
     # directory to store the uploaded schemas
     schemas-directory: ./schemas
-  
-  data-server:
-    # if true, enables datastore and data RPCs
-    enabled: true
-    # max number of candidates per DS
-    max-candidates: 16
+
   # max message size in bytes the server can receive. 
   # If this is not set, it defaults to 4 * 1024 * 1024 (4MB)
   max-recv-msg-size: 25165824
@@ -61,74 +56,13 @@ schemas:
       - ./lab/common/yang/srl-21.11.3/ietf
     excludes:
       - .*tools.*
-  - name: junos
-    vendor: Juniper
-    version: 22.3R1
-    files:
-      - ./lab/common/yang/junos-22.3R1/models
-    directories:
-      - ./lab/common/yang/junos-22.3R1/common
-
-datastores: # this specifies MAIN datastores
-  - name: srl1
-    schema: 
-      name: srl
-      vendor: Nokia
-      version: 22.11.1
-    sbi:
-      type: gnmi # nc, nats, redis
-      address: clab-schema-srl1:57400
-      credentials:
-        username: admin
-        password: NokiaSrl1!
-      tls:
-        skip-verify: true
-    sync:
-      validate: true
-      gnmi:
-        - path:
-          - /
-          name: config
-          mode: on-change
-          encoding: 45
-        - path:
-          - /
-          name: state
-          mode: sample
-          encoding: 46
-  - name: srl2
-    schema: 
-      name: srl
-      vendor: Nokia
-      version: 22.11.1
-    sbi:
-      type: gnmi # nc, nats, redis
-      address: clab-schema-srl2:57400
-      credentials:
-        username: admin
-        password: NokiaSrl1!
-      tls:
-        skip-verify: true
-  - name: crpd1
-    schema:
-      name: junos
-      vendor: Juniper
-      version: 22.3R1
-    sbi:
-      type: nc
-      address: clab-crpd-crpd1
-      credentials:
-        username: root
-        password: clab123
-
-schema-server:
-  address: localhost:55000
-  # TLS config
-  # tls:
-  #   ca:
-  #   cert:
-  #   key:
-  #   skip-verify:
+  # - name: junos
+  #   vendor: Juniper
+  #   version: 22.3R1
+  #   files:
+  #     - ./lab/common/yang/junos-22.3R1/models
+  #   directories:
+  #     - ./lab/common/yang/junos-22.3R1/common
   
 prometheus:
   address: ":55090"

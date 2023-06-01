@@ -45,16 +45,16 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *schemapb.ContainerSchema
 		case child.IsDir():
 			c.Children = append(c.Children, child.Name)
 		case child.IsLeaf(), child.IsLeafList():
-			o := ObjectFromYEntry(child, withDesc)
-			switch o := o.(type) {
-			case *schemapb.LeafSchema:
+			o := SchemaElemFromYEntry(child, withDesc)
+			switch o := o.Schema.(type) {
+			case *schemapb.SchemaElem_Field:
 				if _, ok := keys[child.Name]; ok {
-					c.Keys = append(c.Keys, o)
+					c.Keys = append(c.Keys, o.Field)
 					continue
 				}
-				c.Fields = append(c.Fields, o)
-			case *schemapb.LeafListSchema:
-				c.Leaflists = append(c.Leaflists, o)
+				c.Fields = append(c.Fields, o.Field)
+			case *schemapb.SchemaElem_Leaflist:
+				c.Leaflists = append(c.Leaflists, o.Leaflist)
 			}
 		}
 	}
