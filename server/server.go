@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -28,8 +27,7 @@ type Server struct {
 
 	cfn context.CancelFunc
 
-	ms      *sync.RWMutex
-	schemas map[string]*schema.Schema
+	schemaStore *schema.Store
 
 	srv *grpc.Server
 	schemapb.UnimplementedSchemaServerServer
@@ -41,12 +39,11 @@ type Server struct {
 func NewServer(c *config.Config) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	var s = &Server{
-		config:  c,
-		cfn:     cancel,
-		ms:      &sync.RWMutex{},
-		schemas: make(map[string]*schema.Schema, len(c.Schemas)),
-		router:  mux.NewRouter(),
-		reg:     prometheus.NewRegistry(),
+		config:      c,
+		cfn:         cancel,
+		schemaStore: schema.NewStore(),
+		router:      mux.NewRouter(),
+		reg:         prometheus.NewRegistry(),
 	}
 
 	// gRPC server options
@@ -90,7 +87,7 @@ func NewServer(c *config.Config) (*Server, error) {
 		if err != nil {
 			return nil, fmt.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
 		}
-		s.schemas[sc.UniqueName("")] = sc
+		s.schemaStore.AddSchema(sc)
 	}
 	// register Schema server gRPC Methods
 	schemapb.RegisterSchemaServerServer(s.srv, s)
@@ -135,43 +132,6 @@ func (s *Server) Stop() {
 	s.cfn()
 }
 
-// func (s *Server) BuildSchemaElems(ctx context.Context, sc *schema.Schema) {
-// 	sc.Walk(nil, func(ec *yang.Entry) error {
-// 		p := make([]string, 0)
-// 		ecp := toPath(ec, p)
-// 		if ecp == "" {
-// 			return nil
-// 		}
-// 		if _, ok := s.schemaElems[sc.UniqueName("")]; !ok {
-// 			s.schemaElems[sc.UniqueName("")] = make(map[string]*schemapb.SchemaElem)
-// 		}
-// 		s.schemaElems[sc.UniqueName("")][ecp] = schema.SchemaElemFromYEntry(ec, true)
-// 		// log.Debugf("storing %q under %q", ec.Name, ecp)
-// 		return nil
-// 	})
-// }
-
-// func toPath(e *yang.Entry, p []string) string {
-// 	if e.Annotation != nil && e.Annotation["root"] == true {
-// 		reverse(p)
-// 		return strings.Join(p, "/")
-// 	}
-// 	if e.IsCase() || e.IsChoice() {
-// 		e = e.Parent
-// 	}
-// 	p = append(p, e.Name)
-// 	if e.Parent != nil {
-// 		if e.Parent.IsCase() || e.Parent.IsChoice() {
-// 			return toPath(e.Parent.Parent, p)
-// 		}
-// 		return toPath(e.Parent, p)
-// 	}
-// 	reverse(p)
-// 	return strings.Join(p[1:], "/")
-// }
-
-// func reverse(p []string) {
-// 	for i, j := 0, len(p)-1; i < j; i, j = i+1, j-1 {
-// 		p[i], p[j] = p[j], p[i]
-// 	}
-// }
+func (s *Server) SchemaStore() *schema.Store {
+	return s.schemaStore
+}

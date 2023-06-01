@@ -1,23 +1,13 @@
-package server
+package schema
 
 import (
-	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
-	"crypto/sha512"
-	"errors"
 	"fmt"
-	"hash"
-	"io"
-	"os"
-	"path"
 	"sort"
 	"sync"
 
 	"github.com/iptecharch/schema-server/config"
 	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
-	"github.com/iptecharch/schema-server/schema"
 	"github.com/iptecharch/schema-server/utils"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
@@ -25,8 +15,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *Server) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (*schemapb.GetSchemaResponse, error) {
-	log.Debugf("received GetSchemaRequest: %v", req)
+type Store struct {
+	ms      *sync.RWMutex
+	schemas map[string]*Schema
+}
+
+func NewStore() *Store {
+	return &Store{
+		ms:      &sync.RWMutex{},
+		schemas: map[string]*Schema{},
+	}
+}
+
+func (s *Store) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (*schemapb.GetSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -44,13 +45,20 @@ func (s *Server) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) 
 		return nil, err
 	}
 	resp := &schemapb.GetSchemaResponse{
-		Schema: schema.SchemaElemFromYEntry(e, req.GetWithDescription()),
+		Schema: SchemaElemFromYEntry(e, req.GetWithDescription()),
 	}
 	log.Tracef("schema response: %v", resp)
 	return resp, nil
 }
 
-func (s *Server) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest) (*schemapb.ListSchemaResponse, error) {
+func (s *Store) HasSchema(name string) bool {
+	s.ms.RLock()
+	defer s.ms.RUnlock()
+	_, ok := s.schemas[name]
+	return ok
+}
+
+func (s *Store) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest) (*schemapb.ListSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	rsp := &schemapb.ListSchemaResponse{
@@ -67,7 +75,7 @@ func (s *Server) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest
 	return rsp, nil
 }
 
-func (s *Server) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDetailsRequest) (*schemapb.GetSchemaDetailsResponse, error) {
+func (s *Store) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDetailsRequest) (*schemapb.GetSchemaDetailsResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -92,7 +100,7 @@ func (s *Server) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDe
 	return rsp, nil
 }
 
-func (s *Server) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaRequest) (*schemapb.CreateSchemaResponse, error) {
+func (s *Store) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaRequest) (*schemapb.CreateSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -111,7 +119,7 @@ func (s *Server) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaReq
 	case req.GetSchema().GetVersion() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
-	sc, err := schema.NewSchema(
+	sc, err := NewSchema(
 		&config.SchemaConfig{
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
@@ -135,7 +143,7 @@ func (s *Server) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaReq
 	}, nil
 }
 
-func (s *Server) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaRequest) (*schemapb.ReloadSchemaResponse, error) {
+func (s *Store) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaRequest) (*schemapb.ReloadSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -156,7 +164,7 @@ func (s *Server) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaReq
 	return &schemapb.ReloadSchemaResponse{}, nil
 }
 
-func (s *Server) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaRequest) (*schemapb.DeleteSchemaResponse, error) {
+func (s *Store) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaRequest) (*schemapb.DeleteSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -182,7 +190,7 @@ func (s *Server) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaReq
 	return &schemapb.DeleteSchemaResponse{}, nil
 }
 
-func (s *Server) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*schemapb.ToPathResponse, error) {
+func (s *Store) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*schemapb.ToPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -215,7 +223,7 @@ func (s *Server) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*sche
 	return rsp, nil
 }
 
-func (s *Server) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest) (*schemapb.ExpandPathResponse, error) {
+func (s *Store) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest) (*schemapb.ExpandPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -256,185 +264,29 @@ func (s *Server) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest
 	return rsp, nil
 }
 
-func (s *Server) UploadSchema(stream schemapb.SchemaServer_UploadSchemaServer) error {
-	createReq, err := stream.Recv()
-	if err != nil {
-		return err
-	}
-
-	var name string
-	var vendor string
-	var version string
-	var files []string
-	var dirs []string
-
-	switch req := createReq.Upload.(type) {
-	case *schemapb.UploadSchemaRequest_CreateSchema:
-		switch {
-		case req.CreateSchema.GetSchema().GetName() == "":
-			return status.Error(codes.InvalidArgument, "missing schema name")
-		case req.CreateSchema.GetSchema().GetVendor() == "":
-			return status.Error(codes.InvalidArgument, "missing schema vendor")
-		case req.CreateSchema.GetSchema().GetVersion() == "":
-			return status.Error(codes.InvalidArgument, "missing schema version")
-		}
-		name = req.CreateSchema.GetSchema().GetName()
-		vendor = req.CreateSchema.GetSchema().GetVendor()
-		version = req.CreateSchema.GetSchema().GetVersion()
-		s.ms.RLock()
-		_, ok := s.schemas[fmt.Sprintf("%s@%s@%s", name, vendor, version)]
-		s.ms.RUnlock()
-		if ok {
-			return status.Errorf(codes.InvalidArgument, "schema %s/%s/%s already exists", name, vendor, version)
-		}
-	}
-	dirname := fmt.Sprintf("%s_%s_%s", name, vendor, version)
-	handledFiles := make(map[string]*os.File)
-LOOP:
-	for {
-		updloadFileReq, err := stream.Recv()
-		if err != nil {
-			return err
-		}
-		switch updloadFileReq := updloadFileReq.Upload.(type) {
-		case *schemapb.UploadSchemaRequest_SchemaFile:
-			if updloadFileReq.SchemaFile.GetFileName() == "" {
-				return status.Error(codes.InvalidArgument, "missing file name")
-			}
-			var uplFile *os.File
-			var ok bool
-			fileName := path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname, updloadFileReq.SchemaFile.GetFileName())
-			if uplFile, ok = handledFiles[fileName]; !ok {
-				osf, err := os.Create(fileName)
-				if err != nil {
-					return err
-				}
-				handledFiles[fileName] = osf
-			}
-			if len(updloadFileReq.SchemaFile.GetContents()) > 0 {
-				_, err = uplFile.Write(updloadFileReq.SchemaFile.GetContents())
-				if err != nil {
-					uplFile.Truncate(0)
-					uplFile.Close()
-					os.Remove(fileName)
-					return err
-				}
-			}
-			if updloadFileReq.SchemaFile.GetHash() != nil {
-				var hash hash.Hash
-				switch updloadFileReq.SchemaFile.GetHash().GetMethod() {
-				case schemapb.Hash_UNSPECIFIED:
-					uplFile.Truncate(0)
-					uplFile.Close()
-					os.Remove(fileName)
-					return status.Errorf(codes.InvalidArgument, "hash method unspecified")
-				case schemapb.Hash_MD5:
-					hash = md5.New()
-				case schemapb.Hash_SHA256:
-					hash = sha256.New()
-				case schemapb.Hash_SHA512:
-					hash = sha512.New()
-				}
-				rb := make([]byte, 1024*1024)
-				for {
-					n, err := uplFile.Read(rb)
-					if err != nil {
-						if errors.Is(err, io.EOF) {
-							break
-						}
-						uplFile.Close()
-						err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-						if err2 != nil {
-							log.Errorf("failed to delete %s: %v", dirname, err2)
-						}
-						return err
-					}
-					_, err = hash.Write(rb[:n])
-					if err != nil {
-						uplFile.Close()
-						err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-						if err2 != nil {
-							log.Errorf("failed to delete %s: %v", dirname, err2)
-						}
-						return err
-					}
-					rb = make([]byte, 1024*1024)
-				}
-				calcHash := hash.Sum(nil)
-				if !bytes.Equal(calcHash, updloadFileReq.SchemaFile.GetHash().GetHash()) {
-					uplFile.Close()
-					err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-					if err2 != nil {
-						log.Errorf("failed to delete %s: %v", dirname, err2)
-					}
-					return status.Errorf(codes.FailedPrecondition, "file %s has wrong hash", updloadFileReq.SchemaFile.GetFileName())
-				}
-				uplFile.Close()
-				switch updloadFileReq.SchemaFile.GetFileType() {
-				case schemapb.UploadSchemaFile_MODULE:
-					files = append(files, fileName)
-				case schemapb.UploadSchemaFile_DEPENDENCY:
-					dirs = append(dirs, fileName)
-				}
-				delete(handledFiles, fileName)
-			}
-		case *schemapb.UploadSchemaRequest_Finalize:
-			if len(handledFiles) != 0 {
-				err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-				if err2 != nil {
-					log.Errorf("failed to delete %s: %v", dirname, err2)
-				}
-				return status.Errorf(codes.FailedPrecondition, "not all files are fully uploaded")
-			}
-			break LOOP
-		default:
-			err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-			if err2 != nil {
-				log.Errorf("failed to delete %s: %v", dirname, err2)
-			}
-			return status.Errorf(codes.InvalidArgument, "unexpected message type")
-		}
-	}
-
-	sc, err := schema.NewSchema(
-		&config.SchemaConfig{
-			Name:        name,
-			Vendor:      vendor,
-			Version:     version,
-			Files:       files,
-			Directories: dirs,
-		},
-	)
-	if err != nil {
-		err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
-		if err2 != nil {
-			log.Errorf("failed to delete %s: %v", dirname, err2)
-		}
-		return err
-	}
+func (s *Store) AddSchema(sc *Schema) {
 	s.ms.Lock()
 	defer s.ms.Unlock()
 	s.schemas[sc.UniqueName("")] = sc
-	return nil
 }
 
-func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schemapb.SchemaServer_GetSchemaElementsServer) error {
+func (s *Store) GetSchemaElements(ctx context.Context, req *schemapb.GetSchemaRequest) (chan *schemapb.SchemaElem, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
-		return status.Error(codes.InvalidArgument, "missing schema details")
+		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	sc, ok := s.schemas[fmt.Sprintf("%s@%s@%s", reqSchema.Name, reqSchema.Vendor, reqSchema.Version)]
 	if !ok {
-		return status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
+		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	ctx := stream.Context()
 	pes := utils.ToStrings(req.GetPath(), false, true)
 
+	sch := make(chan *schemapb.SchemaElem)
 	ych := make(chan *yang.Entry)
 	wg := new(sync.WaitGroup)
-	wg.Add(1)
+	wg.Add(2)
 	go func() {
 		defer wg.Done()
 		var err error
@@ -446,10 +298,7 @@ func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schema
 				if !ok {
 					return
 				}
-				sce := schema.SchemaElemFromYEntry(e, req.GetWithDescription())
-				err = stream.Send(&schemapb.GetSchemaResponse{
-					Schema: sce,
-				})
+				sch <- SchemaElemFromYEntry(e, req.GetWithDescription())
 				if err != nil {
 					log.Errorf("%v", err)
 					return
@@ -457,7 +306,14 @@ func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schema
 			}
 		}
 	}()
-	err := sc.GetEntryCh(pes, ych)
+	go func() {
+		defer wg.Done()
+		err := sc.GetEntryCh(pes, ych)
+		if err != nil {
+			log.Errorf("failed getting entries from schema: %v", err)
+		}
+	}()
 	wg.Wait()
-	return err
+
+	return sch, nil
 }
