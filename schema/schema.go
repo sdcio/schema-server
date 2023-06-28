@@ -63,6 +63,14 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 	return sc, nil
 }
 
+func (s *Schema) Key() SchemaKey {
+	return SchemaKey{
+		Name:    s.Name(),
+		Vendor:  s.Vendor(),
+		Version: s.Version(),
+	}
+}
+
 func (s *Schema) Reload() (*Schema, error) {
 	s.status = "reloading"
 	return NewSchema(s.config)

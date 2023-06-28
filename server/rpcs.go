@@ -86,7 +86,12 @@ func (s *Server) UploadSchema(stream schemapb.SchemaServer_UploadSchemaServer) e
 		name = req.CreateSchema.GetSchema().GetName()
 		vendor = req.CreateSchema.GetSchema().GetVendor()
 		version = req.CreateSchema.GetSchema().GetVersion()
-		if s.schemaStore.HasSchema(fmt.Sprintf("%s@%s@%s", name, vendor, version)) {
+		scKey := schema.SchemaKey{
+			Name:    name,
+			Vendor:  vendor,
+			Version: version,
+		}
+		if s.schemaStore.HasSchema(scKey) {
 			return status.Errorf(codes.InvalidArgument, "schema %s/%s/%s already exists", name, vendor, version)
 		}
 	}
