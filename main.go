@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/iptecharch/schema-server/config"
@@ -15,6 +18,7 @@ import (
 var configFile string
 var debug bool
 var trace bool
+var stop bool
 
 func main() {
 	pflag.StringVarP(&configFile, "config", "c", "schema-server.yaml", "config file path")
@@ -51,11 +55,28 @@ START:
 		os.Exit(1)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	setupCloseHandler(cancel)
+
 	err = s.Serve(ctx)
 	if err != nil {
+		if stop {
+			return
+		}
 		log.Errorf("failed to run server: %v", err)
 		time.Sleep(time.Second)
 		goto START
 	}
+}
+
+func setupCloseHandler(cancelFn context.CancelFunc) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
+	go func() {
+		sig := <-c
+		fmt.Fprintf(os.Stderr, "\nreceived signal '%s'. terminating...\n", sig.String())
+		stop = true
+		cancelFn()
+		time.Sleep(500 * time.Millisecond)
+		os.Exit(0)
+	}()
 }
