@@ -20,6 +20,14 @@ grpc-server:
   max-recv-msg-size: 25165824
   
 schemas:
+  - name: sros
+    vendor: Nokia
+    version: 22.10
+    files:
+      - ./lab/common/yang/sros_22.10/YANG/nokia-combined
+    directories:
+      - ./lab/common/yang/sros_22.10/YANG/ietf
+      - ./lab/common/yang/sros_22.10/YANG/nokia-sros-yang-extensions.yang
   - name: srl
     vendor: Nokia
     version: 22.11.1
