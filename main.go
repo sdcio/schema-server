@@ -15,16 +15,24 @@ import (
 	"github.com/spf13/pflag"
 )
 
+var version = "dev"
+
 var configFile string
 var debug bool
 var trace bool
 var stop bool
+var printVersion bool
 
 func main() {
 	pflag.StringVarP(&configFile, "config", "c", "schema-server.yaml", "config file path")
 	pflag.BoolVarP(&debug, "debug", "d", false, "set log level to DEBUG")
 	pflag.BoolVarP(&trace, "trace", "t", false, "set log level to TRACE")
+	pflag.BoolVarP(&printVersion, "version", "v", false, "print version")
 	pflag.Parse()
+	if printVersion {
+		fmt.Printf("%s\n", version)
+		os.Exit(0)
+	}
 	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
 	log.SetLevel(log.InfoLevel)
 	if debug {

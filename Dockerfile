@@ -1,12 +1,15 @@
 FROM golang:1.19.5 as builder
 
 RUN apt-get update && apt-get install -y ca-certificates git-core ssh
-ADD keys/ /root/.ssh/
+RUN mkdir -p /root/.ssh/
+ADD ./keys/ /root/.ssh/
 RUN chmod 700 /root/.ssh/id_rsa
 RUN echo "Host github.com\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
 RUN git config --global url.ssh://git@github.com/.insteadOf https://github.com/
 
+RUN mkdir -p /build
 COPY go.mod go.sum /build/
+
 WORKDIR /build
 RUN --mount=type=cache,target=/root/.cache/go-build \
     go mod download
