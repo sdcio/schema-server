@@ -62,13 +62,15 @@ message GetSchemaRequest {
 }
 
 message GetSchemaResponse {
+    SchemaElem schema = 1;
+}
+message SchemaElem {
     oneof schema {
         ContainerSchema container = 1;
         LeafSchema      field     = 2;
         LeafListSchema  leaflist  = 3;
     }
 }
-
 message CreateSchemaRequest {
     Schema          schema       = 1; // status unset
     repeated string file         = 2;

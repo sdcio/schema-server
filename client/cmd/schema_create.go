@@ -20,7 +20,7 @@ var schemaExcludes []string
 var schemaCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create a schema",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
 		schemaClient, err := createSchemaClient(ctx, addr)

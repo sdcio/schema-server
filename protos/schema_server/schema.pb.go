@@ -279,7 +279,7 @@ func (x UploadSchemaFile_FileType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use UploadSchemaFile_FileType.Descriptor instead.
 func (UploadSchemaFile_FileType) EnumDescriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{14, 0}
+	return file_schema_proto_rawDescGZIP(), []int{15, 0}
 }
 
 type Hash_HashMethod int32
@@ -331,7 +331,7 @@ func (x Hash_HashMethod) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Hash_HashMethod.Descriptor instead.
 func (Hash_HashMethod) EnumDescriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{19, 0}
+	return file_schema_proto_rawDescGZIP(), []int{20, 0}
 }
 
 type Schema struct {
@@ -678,11 +678,7 @@ type GetSchemaResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Types that are assignable to Schema:
-	//	*GetSchemaResponse_Container
-	//	*GetSchemaResponse_Field
-	//	*GetSchemaResponse_Leaflist
-	Schema isGetSchemaResponse_Schema `protobuf_oneof:"schema"`
+	Schema *SchemaElem `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`
 }
 
 func (x *GetSchemaResponse) Reset() {
@@ -717,55 +713,106 @@ func (*GetSchemaResponse) Descriptor() ([]byte, []int) {
 	return file_schema_proto_rawDescGZIP(), []int{6}
 }
 
-func (m *GetSchemaResponse) GetSchema() isGetSchemaResponse_Schema {
+func (x *GetSchemaResponse) GetSchema() *SchemaElem {
+	if x != nil {
+		return x.Schema
+	}
+	return nil
+}
+
+type SchemaElem struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Schema:
+	//	*SchemaElem_Container
+	//	*SchemaElem_Field
+	//	*SchemaElem_Leaflist
+	Schema isSchemaElem_Schema `protobuf_oneof:"schema"`
+}
+
+func (x *SchemaElem) Reset() {
+	*x = SchemaElem{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_schema_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SchemaElem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SchemaElem) ProtoMessage() {}
+
+func (x *SchemaElem) ProtoReflect() protoreflect.Message {
+	mi := &file_schema_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SchemaElem.ProtoReflect.Descriptor instead.
+func (*SchemaElem) Descriptor() ([]byte, []int) {
+	return file_schema_proto_rawDescGZIP(), []int{7}
+}
+
+func (m *SchemaElem) GetSchema() isSchemaElem_Schema {
 	if m != nil {
 		return m.Schema
 	}
 	return nil
 }
 
-func (x *GetSchemaResponse) GetContainer() *ContainerSchema {
-	if x, ok := x.GetSchema().(*GetSchemaResponse_Container); ok {
+func (x *SchemaElem) GetContainer() *ContainerSchema {
+	if x, ok := x.GetSchema().(*SchemaElem_Container); ok {
 		return x.Container
 	}
 	return nil
 }
 
-func (x *GetSchemaResponse) GetField() *LeafSchema {
-	if x, ok := x.GetSchema().(*GetSchemaResponse_Field); ok {
+func (x *SchemaElem) GetField() *LeafSchema {
+	if x, ok := x.GetSchema().(*SchemaElem_Field); ok {
 		return x.Field
 	}
 	return nil
 }
 
-func (x *GetSchemaResponse) GetLeaflist() *LeafListSchema {
-	if x, ok := x.GetSchema().(*GetSchemaResponse_Leaflist); ok {
+func (x *SchemaElem) GetLeaflist() *LeafListSchema {
+	if x, ok := x.GetSchema().(*SchemaElem_Leaflist); ok {
 		return x.Leaflist
 	}
 	return nil
 }
 
-type isGetSchemaResponse_Schema interface {
-	isGetSchemaResponse_Schema()
+type isSchemaElem_Schema interface {
+	isSchemaElem_Schema()
 }
 
-type GetSchemaResponse_Container struct {
+type SchemaElem_Container struct {
 	Container *ContainerSchema `protobuf:"bytes,1,opt,name=container,proto3,oneof"`
 }
 
-type GetSchemaResponse_Field struct {
+type SchemaElem_Field struct {
 	Field *LeafSchema `protobuf:"bytes,2,opt,name=field,proto3,oneof"`
 }
 
-type GetSchemaResponse_Leaflist struct {
+type SchemaElem_Leaflist struct {
 	Leaflist *LeafListSchema `protobuf:"bytes,3,opt,name=leaflist,proto3,oneof"`
 }
 
-func (*GetSchemaResponse_Container) isGetSchemaResponse_Schema() {}
+func (*SchemaElem_Container) isSchemaElem_Schema() {}
 
-func (*GetSchemaResponse_Field) isGetSchemaResponse_Schema() {}
+func (*SchemaElem_Field) isSchemaElem_Schema() {}
 
-func (*GetSchemaResponse_Leaflist) isGetSchemaResponse_Schema() {}
+func (*SchemaElem_Leaflist) isSchemaElem_Schema() {}
 
 type CreateSchemaRequest struct {
 	state         protoimpl.MessageState
@@ -781,7 +828,7 @@ type CreateSchemaRequest struct {
 func (x *CreateSchemaRequest) Reset() {
 	*x = CreateSchemaRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[7]
+		mi := &file_schema_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -794,7 +841,7 @@ func (x *CreateSchemaRequest) String() string {
 func (*CreateSchemaRequest) ProtoMessage() {}
 
 func (x *CreateSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[7]
+	mi := &file_schema_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -807,7 +854,7 @@ func (x *CreateSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSchemaRequest.ProtoReflect.Descriptor instead.
 func (*CreateSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{7}
+	return file_schema_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CreateSchemaRequest) GetSchema() *Schema {
@@ -849,7 +896,7 @@ type CreateSchemaResponse struct {
 func (x *CreateSchemaResponse) Reset() {
 	*x = CreateSchemaResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[8]
+		mi := &file_schema_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -862,7 +909,7 @@ func (x *CreateSchemaResponse) String() string {
 func (*CreateSchemaResponse) ProtoMessage() {}
 
 func (x *CreateSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[8]
+	mi := &file_schema_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -875,7 +922,7 @@ func (x *CreateSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateSchemaResponse.ProtoReflect.Descriptor instead.
 func (*CreateSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{8}
+	return file_schema_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CreateSchemaResponse) GetSchema() *Schema {
@@ -896,7 +943,7 @@ type ReloadSchemaRequest struct {
 func (x *ReloadSchemaRequest) Reset() {
 	*x = ReloadSchemaRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[9]
+		mi := &file_schema_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -909,7 +956,7 @@ func (x *ReloadSchemaRequest) String() string {
 func (*ReloadSchemaRequest) ProtoMessage() {}
 
 func (x *ReloadSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[9]
+	mi := &file_schema_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -922,7 +969,7 @@ func (x *ReloadSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadSchemaRequest.ProtoReflect.Descriptor instead.
 func (*ReloadSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{9}
+	return file_schema_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ReloadSchemaRequest) GetSchema() *Schema {
@@ -941,7 +988,7 @@ type ReloadSchemaResponse struct {
 func (x *ReloadSchemaResponse) Reset() {
 	*x = ReloadSchemaResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[10]
+		mi := &file_schema_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -954,7 +1001,7 @@ func (x *ReloadSchemaResponse) String() string {
 func (*ReloadSchemaResponse) ProtoMessage() {}
 
 func (x *ReloadSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[10]
+	mi := &file_schema_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -967,7 +1014,7 @@ func (x *ReloadSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReloadSchemaResponse.ProtoReflect.Descriptor instead.
 func (*ReloadSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{10}
+	return file_schema_proto_rawDescGZIP(), []int{11}
 }
 
 type DeleteSchemaRequest struct {
@@ -981,7 +1028,7 @@ type DeleteSchemaRequest struct {
 func (x *DeleteSchemaRequest) Reset() {
 	*x = DeleteSchemaRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[11]
+		mi := &file_schema_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -994,7 +1041,7 @@ func (x *DeleteSchemaRequest) String() string {
 func (*DeleteSchemaRequest) ProtoMessage() {}
 
 func (x *DeleteSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[11]
+	mi := &file_schema_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1007,7 +1054,7 @@ func (x *DeleteSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSchemaRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{11}
+	return file_schema_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *DeleteSchemaRequest) GetSchema() *Schema {
@@ -1026,7 +1073,7 @@ type DeleteSchemaResponse struct {
 func (x *DeleteSchemaResponse) Reset() {
 	*x = DeleteSchemaResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[12]
+		mi := &file_schema_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1039,7 +1086,7 @@ func (x *DeleteSchemaResponse) String() string {
 func (*DeleteSchemaResponse) ProtoMessage() {}
 
 func (x *DeleteSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[12]
+	mi := &file_schema_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1052,7 +1099,7 @@ func (x *DeleteSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSchemaResponse.ProtoReflect.Descriptor instead.
 func (*DeleteSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{12}
+	return file_schema_proto_rawDescGZIP(), []int{13}
 }
 
 type UploadSchemaRequest struct {
@@ -1070,7 +1117,7 @@ type UploadSchemaRequest struct {
 func (x *UploadSchemaRequest) Reset() {
 	*x = UploadSchemaRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[13]
+		mi := &file_schema_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1083,7 +1130,7 @@ func (x *UploadSchemaRequest) String() string {
 func (*UploadSchemaRequest) ProtoMessage() {}
 
 func (x *UploadSchemaRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[13]
+	mi := &file_schema_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1143,7 @@ func (x *UploadSchemaRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadSchemaRequest.ProtoReflect.Descriptor instead.
 func (*UploadSchemaRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{13}
+	return file_schema_proto_rawDescGZIP(), []int{14}
 }
 
 func (m *UploadSchemaRequest) GetUpload() isUploadSchemaRequest_Upload {
@@ -1163,7 +1210,7 @@ type UploadSchemaFile struct {
 func (x *UploadSchemaFile) Reset() {
 	*x = UploadSchemaFile{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[14]
+		mi := &file_schema_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1176,7 +1223,7 @@ func (x *UploadSchemaFile) String() string {
 func (*UploadSchemaFile) ProtoMessage() {}
 
 func (x *UploadSchemaFile) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[14]
+	mi := &file_schema_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,7 +1236,7 @@ func (x *UploadSchemaFile) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadSchemaFile.ProtoReflect.Descriptor instead.
 func (*UploadSchemaFile) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{14}
+	return file_schema_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *UploadSchemaFile) GetFileName() string {
@@ -1232,7 +1279,7 @@ type ToPathRequest struct {
 func (x *ToPathRequest) Reset() {
 	*x = ToPathRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[15]
+		mi := &file_schema_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1245,7 +1292,7 @@ func (x *ToPathRequest) String() string {
 func (*ToPathRequest) ProtoMessage() {}
 
 func (x *ToPathRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[15]
+	mi := &file_schema_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1258,7 +1305,7 @@ func (x *ToPathRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToPathRequest.ProtoReflect.Descriptor instead.
 func (*ToPathRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{15}
+	return file_schema_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ToPathRequest) GetPathElement() []string {
@@ -1286,7 +1333,7 @@ type ToPathResponse struct {
 func (x *ToPathResponse) Reset() {
 	*x = ToPathResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[16]
+		mi := &file_schema_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1299,7 +1346,7 @@ func (x *ToPathResponse) String() string {
 func (*ToPathResponse) ProtoMessage() {}
 
 func (x *ToPathResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[16]
+	mi := &file_schema_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1312,7 +1359,7 @@ func (x *ToPathResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ToPathResponse.ProtoReflect.Descriptor instead.
 func (*ToPathResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{16}
+	return file_schema_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ToPathResponse) GetPath() *Path {
@@ -1336,7 +1383,7 @@ type ExpandPathRequest struct {
 func (x *ExpandPathRequest) Reset() {
 	*x = ExpandPathRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[17]
+		mi := &file_schema_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1349,7 +1396,7 @@ func (x *ExpandPathRequest) String() string {
 func (*ExpandPathRequest) ProtoMessage() {}
 
 func (x *ExpandPathRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[17]
+	mi := &file_schema_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1362,7 +1409,7 @@ func (x *ExpandPathRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpandPathRequest.ProtoReflect.Descriptor instead.
 func (*ExpandPathRequest) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{17}
+	return file_schema_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ExpandPathRequest) GetPath() *Path {
@@ -1405,7 +1452,7 @@ type ExpandPathResponse struct {
 func (x *ExpandPathResponse) Reset() {
 	*x = ExpandPathResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[18]
+		mi := &file_schema_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1418,7 +1465,7 @@ func (x *ExpandPathResponse) String() string {
 func (*ExpandPathResponse) ProtoMessage() {}
 
 func (x *ExpandPathResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[18]
+	mi := &file_schema_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1431,7 +1478,7 @@ func (x *ExpandPathResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExpandPathResponse.ProtoReflect.Descriptor instead.
 func (*ExpandPathResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{18}
+	return file_schema_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ExpandPathResponse) GetPath() []*Path {
@@ -1460,7 +1507,7 @@ type Hash struct {
 func (x *Hash) Reset() {
 	*x = Hash{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[19]
+		mi := &file_schema_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1473,7 +1520,7 @@ func (x *Hash) String() string {
 func (*Hash) ProtoMessage() {}
 
 func (x *Hash) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[19]
+	mi := &file_schema_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1486,7 +1533,7 @@ func (x *Hash) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Hash.ProtoReflect.Descriptor instead.
 func (*Hash) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{19}
+	return file_schema_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *Hash) GetMethod() Hash_HashMethod {
@@ -1512,7 +1559,7 @@ type UploadSchemaFinalize struct {
 func (x *UploadSchemaFinalize) Reset() {
 	*x = UploadSchemaFinalize{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[20]
+		mi := &file_schema_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1525,7 +1572,7 @@ func (x *UploadSchemaFinalize) String() string {
 func (*UploadSchemaFinalize) ProtoMessage() {}
 
 func (x *UploadSchemaFinalize) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[20]
+	mi := &file_schema_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1538,7 +1585,7 @@ func (x *UploadSchemaFinalize) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadSchemaFinalize.ProtoReflect.Descriptor instead.
 func (*UploadSchemaFinalize) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{20}
+	return file_schema_proto_rawDescGZIP(), []int{21}
 }
 
 type UploadSchemaResponse struct {
@@ -1550,7 +1597,7 @@ type UploadSchemaResponse struct {
 func (x *UploadSchemaResponse) Reset() {
 	*x = UploadSchemaResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[21]
+		mi := &file_schema_proto_msgTypes[22]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1563,7 +1610,7 @@ func (x *UploadSchemaResponse) String() string {
 func (*UploadSchemaResponse) ProtoMessage() {}
 
 func (x *UploadSchemaResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[21]
+	mi := &file_schema_proto_msgTypes[22]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1576,7 +1623,7 @@ func (x *UploadSchemaResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadSchemaResponse.ProtoReflect.Descriptor instead.
 func (*UploadSchemaResponse) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{21}
+	return file_schema_proto_rawDescGZIP(), []int{22}
 }
 
 // sub messages
@@ -1606,7 +1653,7 @@ type ContainerSchema struct {
 func (x *ContainerSchema) Reset() {
 	*x = ContainerSchema{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[22]
+		mi := &file_schema_proto_msgTypes[23]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1619,7 +1666,7 @@ func (x *ContainerSchema) String() string {
 func (*ContainerSchema) ProtoMessage() {}
 
 func (x *ContainerSchema) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[22]
+	mi := &file_schema_proto_msgTypes[23]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1632,7 +1679,7 @@ func (x *ContainerSchema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ContainerSchema.ProtoReflect.Descriptor instead.
 func (*ContainerSchema) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{22}
+	return file_schema_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ContainerSchema) GetName() string {
@@ -1772,7 +1819,7 @@ type LeafListSchema struct {
 func (x *LeafListSchema) Reset() {
 	*x = LeafListSchema{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[23]
+		mi := &file_schema_proto_msgTypes[24]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1785,7 +1832,7 @@ func (x *LeafListSchema) String() string {
 func (*LeafListSchema) ProtoMessage() {}
 
 func (x *LeafListSchema) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[23]
+	mi := &file_schema_proto_msgTypes[24]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1798,7 +1845,7 @@ func (x *LeafListSchema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeafListSchema.ProtoReflect.Descriptor instead.
 func (*LeafListSchema) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{23}
+	return file_schema_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *LeafListSchema) GetName() string {
@@ -1930,7 +1977,7 @@ type LeafSchema struct {
 func (x *LeafSchema) Reset() {
 	*x = LeafSchema{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[24]
+		mi := &file_schema_proto_msgTypes[25]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1943,7 +1990,7 @@ func (x *LeafSchema) String() string {
 func (*LeafSchema) ProtoMessage() {}
 
 func (x *LeafSchema) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[24]
+	mi := &file_schema_proto_msgTypes[25]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1956,7 +2003,7 @@ func (x *LeafSchema) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LeafSchema.ProtoReflect.Descriptor instead.
 func (*LeafSchema) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{24}
+	return file_schema_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *LeafSchema) GetName() string {
@@ -2076,7 +2123,7 @@ type SchemaLeafType struct {
 func (x *SchemaLeafType) Reset() {
 	*x = SchemaLeafType{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[25]
+		mi := &file_schema_proto_msgTypes[26]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2089,7 +2136,7 @@ func (x *SchemaLeafType) String() string {
 func (*SchemaLeafType) ProtoMessage() {}
 
 func (x *SchemaLeafType) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[25]
+	mi := &file_schema_proto_msgTypes[26]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2102,7 +2149,7 @@ func (x *SchemaLeafType) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaLeafType.ProtoReflect.Descriptor instead.
 func (*SchemaLeafType) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{25}
+	return file_schema_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *SchemaLeafType) GetType() string {
@@ -2180,7 +2227,7 @@ type MustStatement struct {
 func (x *MustStatement) Reset() {
 	*x = MustStatement{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[26]
+		mi := &file_schema_proto_msgTypes[27]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2193,7 +2240,7 @@ func (x *MustStatement) String() string {
 func (*MustStatement) ProtoMessage() {}
 
 func (x *MustStatement) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[26]
+	mi := &file_schema_proto_msgTypes[27]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2206,7 +2253,7 @@ func (x *MustStatement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MustStatement.ProtoReflect.Descriptor instead.
 func (*MustStatement) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{26}
+	return file_schema_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *MustStatement) GetStatement() string {
@@ -2237,7 +2284,7 @@ type PathElem struct {
 func (x *PathElem) Reset() {
 	*x = PathElem{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[27]
+		mi := &file_schema_proto_msgTypes[28]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2250,7 +2297,7 @@ func (x *PathElem) String() string {
 func (*PathElem) ProtoMessage() {}
 
 func (x *PathElem) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[27]
+	mi := &file_schema_proto_msgTypes[28]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2263,7 +2310,7 @@ func (x *PathElem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PathElem.ProtoReflect.Descriptor instead.
 func (*PathElem) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{27}
+	return file_schema_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *PathElem) GetName() string {
@@ -2293,7 +2340,7 @@ type Path struct {
 func (x *Path) Reset() {
 	*x = Path{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[28]
+		mi := &file_schema_proto_msgTypes[29]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2306,7 +2353,7 @@ func (x *Path) String() string {
 func (*Path) ProtoMessage() {}
 
 func (x *Path) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[28]
+	mi := &file_schema_proto_msgTypes[29]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2319,7 +2366,7 @@ func (x *Path) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Path.ProtoReflect.Descriptor instead.
 func (*Path) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{28}
+	return file_schema_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *Path) GetOrigin() string {
@@ -2355,7 +2402,7 @@ type SchemaPattern struct {
 func (x *SchemaPattern) Reset() {
 	*x = SchemaPattern{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_schema_proto_msgTypes[29]
+		mi := &file_schema_proto_msgTypes[30]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2368,7 +2415,7 @@ func (x *SchemaPattern) String() string {
 func (*SchemaPattern) ProtoMessage() {}
 
 func (x *SchemaPattern) ProtoReflect() protoreflect.Message {
-	mi := &file_schema_proto_msgTypes[29]
+	mi := &file_schema_proto_msgTypes[30]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2381,7 +2428,7 @@ func (x *SchemaPattern) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SchemaPattern.ProtoReflect.Descriptor instead.
 func (*SchemaPattern) Descriptor() ([]byte, []int) {
-	return file_schema_proto_rawDescGZIP(), []int{29}
+	return file_schema_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *SchemaPattern) GetPattern() string {
@@ -2440,8 +2487,12 @@ var file_schema_proto_rawDesc = []byte{
 	0x08, 0x52, 0x0c, 0x76, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x4b, 0x65, 0x79, 0x73, 0x12,
 	0x29, 0x0a, 0x10, 0x77, 0x69, 0x74, 0x68, 0x5f, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74,
 	0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0f, 0x77, 0x69, 0x74, 0x68, 0x44,
-	0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0xca, 0x01, 0x0a, 0x11, 0x47,
-	0x65, 0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x45, 0x0a, 0x11, 0x47, 0x65,
+	0x74, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x30, 0x0a, 0x06, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32,
+	0x18, 0x2e, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2e, 0x53,
+	0x63, 0x68, 0x65, 0x6d, 0x61, 0x45, 0x6c, 0x65, 0x6d, 0x52, 0x06, 0x73, 0x63, 0x68, 0x65, 0x6d,
+	0x61, 0x22, 0xc3, 0x01, 0x0a, 0x0a, 0x53, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x45, 0x6c, 0x65, 0x6d,
 	0x12, 0x3d, 0x0a, 0x09, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x1d, 0x2e, 0x73, 0x63, 0x68, 0x65, 0x6d, 0x61, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x2e, 0x43, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x53, 0x63, 0x68, 0x65,
@@ -2791,7 +2842,7 @@ func file_schema_proto_rawDescGZIP() []byte {
 }
 
 var file_schema_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_schema_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_schema_proto_goTypes = []interface{}{
 	(LeafType)(0),                    // 0: schema.proto.LeafType
 	(SchemaStatus)(0),                // 1: schema.proto.SchemaStatus
@@ -2805,94 +2856,96 @@ var file_schema_proto_goTypes = []interface{}{
 	(*ListSchemaResponse)(nil),       // 9: schema.proto.ListSchemaResponse
 	(*GetSchemaRequest)(nil),         // 10: schema.proto.GetSchemaRequest
 	(*GetSchemaResponse)(nil),        // 11: schema.proto.GetSchemaResponse
-	(*CreateSchemaRequest)(nil),      // 12: schema.proto.CreateSchemaRequest
-	(*CreateSchemaResponse)(nil),     // 13: schema.proto.CreateSchemaResponse
-	(*ReloadSchemaRequest)(nil),      // 14: schema.proto.ReloadSchemaRequest
-	(*ReloadSchemaResponse)(nil),     // 15: schema.proto.ReloadSchemaResponse
-	(*DeleteSchemaRequest)(nil),      // 16: schema.proto.DeleteSchemaRequest
-	(*DeleteSchemaResponse)(nil),     // 17: schema.proto.DeleteSchemaResponse
-	(*UploadSchemaRequest)(nil),      // 18: schema.proto.UploadSchemaRequest
-	(*UploadSchemaFile)(nil),         // 19: schema.proto.UploadSchemaFile
-	(*ToPathRequest)(nil),            // 20: schema.proto.ToPathRequest
-	(*ToPathResponse)(nil),           // 21: schema.proto.ToPathResponse
-	(*ExpandPathRequest)(nil),        // 22: schema.proto.ExpandPathRequest
-	(*ExpandPathResponse)(nil),       // 23: schema.proto.ExpandPathResponse
-	(*Hash)(nil),                     // 24: schema.proto.Hash
-	(*UploadSchemaFinalize)(nil),     // 25: schema.proto.UploadSchemaFinalize
-	(*UploadSchemaResponse)(nil),     // 26: schema.proto.UploadSchemaResponse
-	(*ContainerSchema)(nil),          // 27: schema.proto.ContainerSchema
-	(*LeafListSchema)(nil),           // 28: schema.proto.LeafListSchema
-	(*LeafSchema)(nil),               // 29: schema.proto.LeafSchema
-	(*SchemaLeafType)(nil),           // 30: schema.proto.SchemaLeafType
-	(*MustStatement)(nil),            // 31: schema.proto.MustStatement
-	(*PathElem)(nil),                 // 32: schema.proto.PathElem
-	(*Path)(nil),                     // 33: schema.proto.Path
-	(*SchemaPattern)(nil),            // 34: schema.proto.SchemaPattern
-	nil,                              // 35: schema.proto.PathElem.KeyEntry
+	(*SchemaElem)(nil),               // 12: schema.proto.SchemaElem
+	(*CreateSchemaRequest)(nil),      // 13: schema.proto.CreateSchemaRequest
+	(*CreateSchemaResponse)(nil),     // 14: schema.proto.CreateSchemaResponse
+	(*ReloadSchemaRequest)(nil),      // 15: schema.proto.ReloadSchemaRequest
+	(*ReloadSchemaResponse)(nil),     // 16: schema.proto.ReloadSchemaResponse
+	(*DeleteSchemaRequest)(nil),      // 17: schema.proto.DeleteSchemaRequest
+	(*DeleteSchemaResponse)(nil),     // 18: schema.proto.DeleteSchemaResponse
+	(*UploadSchemaRequest)(nil),      // 19: schema.proto.UploadSchemaRequest
+	(*UploadSchemaFile)(nil),         // 20: schema.proto.UploadSchemaFile
+	(*ToPathRequest)(nil),            // 21: schema.proto.ToPathRequest
+	(*ToPathResponse)(nil),           // 22: schema.proto.ToPathResponse
+	(*ExpandPathRequest)(nil),        // 23: schema.proto.ExpandPathRequest
+	(*ExpandPathResponse)(nil),       // 24: schema.proto.ExpandPathResponse
+	(*Hash)(nil),                     // 25: schema.proto.Hash
+	(*UploadSchemaFinalize)(nil),     // 26: schema.proto.UploadSchemaFinalize
+	(*UploadSchemaResponse)(nil),     // 27: schema.proto.UploadSchemaResponse
+	(*ContainerSchema)(nil),          // 28: schema.proto.ContainerSchema
+	(*LeafListSchema)(nil),           // 29: schema.proto.LeafListSchema
+	(*LeafSchema)(nil),               // 30: schema.proto.LeafSchema
+	(*SchemaLeafType)(nil),           // 31: schema.proto.SchemaLeafType
+	(*MustStatement)(nil),            // 32: schema.proto.MustStatement
+	(*PathElem)(nil),                 // 33: schema.proto.PathElem
+	(*Path)(nil),                     // 34: schema.proto.Path
+	(*SchemaPattern)(nil),            // 35: schema.proto.SchemaPattern
+	nil,                              // 36: schema.proto.PathElem.KeyEntry
 }
 var file_schema_proto_depIdxs = []int32{
 	1,  // 0: schema.proto.Schema.status:type_name -> schema.proto.SchemaStatus
 	5,  // 1: schema.proto.GetSchemaDetailsRequest.schema:type_name -> schema.proto.Schema
 	5,  // 2: schema.proto.GetSchemaDetailsResponse.schema:type_name -> schema.proto.Schema
 	5,  // 3: schema.proto.ListSchemaResponse.schema:type_name -> schema.proto.Schema
-	33, // 4: schema.proto.GetSchemaRequest.path:type_name -> schema.proto.Path
+	34, // 4: schema.proto.GetSchemaRequest.path:type_name -> schema.proto.Path
 	5,  // 5: schema.proto.GetSchemaRequest.schema:type_name -> schema.proto.Schema
-	27, // 6: schema.proto.GetSchemaResponse.container:type_name -> schema.proto.ContainerSchema
-	29, // 7: schema.proto.GetSchemaResponse.field:type_name -> schema.proto.LeafSchema
-	28, // 8: schema.proto.GetSchemaResponse.leaflist:type_name -> schema.proto.LeafListSchema
-	5,  // 9: schema.proto.CreateSchemaRequest.schema:type_name -> schema.proto.Schema
-	5,  // 10: schema.proto.CreateSchemaResponse.schema:type_name -> schema.proto.Schema
-	5,  // 11: schema.proto.ReloadSchemaRequest.schema:type_name -> schema.proto.Schema
-	5,  // 12: schema.proto.DeleteSchemaRequest.schema:type_name -> schema.proto.Schema
-	12, // 13: schema.proto.UploadSchemaRequest.create_schema:type_name -> schema.proto.CreateSchemaRequest
-	19, // 14: schema.proto.UploadSchemaRequest.schema_file:type_name -> schema.proto.UploadSchemaFile
-	25, // 15: schema.proto.UploadSchemaRequest.finalize:type_name -> schema.proto.UploadSchemaFinalize
-	3,  // 16: schema.proto.UploadSchemaFile.file_type:type_name -> schema.proto.UploadSchemaFile.FileType
-	24, // 17: schema.proto.UploadSchemaFile.hash:type_name -> schema.proto.Hash
-	5,  // 18: schema.proto.ToPathRequest.schema:type_name -> schema.proto.Schema
-	33, // 19: schema.proto.ToPathResponse.path:type_name -> schema.proto.Path
-	33, // 20: schema.proto.ExpandPathRequest.path:type_name -> schema.proto.Path
-	5,  // 21: schema.proto.ExpandPathRequest.schema:type_name -> schema.proto.Schema
-	2,  // 22: schema.proto.ExpandPathRequest.data_type:type_name -> schema.proto.DataType
-	33, // 23: schema.proto.ExpandPathResponse.path:type_name -> schema.proto.Path
-	4,  // 24: schema.proto.Hash.method:type_name -> schema.proto.Hash.HashMethod
-	29, // 25: schema.proto.ContainerSchema.keys:type_name -> schema.proto.LeafSchema
-	29, // 26: schema.proto.ContainerSchema.fields:type_name -> schema.proto.LeafSchema
-	28, // 27: schema.proto.ContainerSchema.leaflists:type_name -> schema.proto.LeafListSchema
-	31, // 28: schema.proto.ContainerSchema.must_statements:type_name -> schema.proto.MustStatement
-	30, // 29: schema.proto.LeafListSchema.type:type_name -> schema.proto.SchemaLeafType
-	31, // 30: schema.proto.LeafListSchema.must_statements:type_name -> schema.proto.MustStatement
-	30, // 31: schema.proto.LeafSchema.type:type_name -> schema.proto.SchemaLeafType
-	31, // 32: schema.proto.LeafSchema.must_statements:type_name -> schema.proto.MustStatement
-	34, // 33: schema.proto.SchemaLeafType.patterns:type_name -> schema.proto.SchemaPattern
-	30, // 34: schema.proto.SchemaLeafType.union_types:type_name -> schema.proto.SchemaLeafType
-	35, // 35: schema.proto.PathElem.key:type_name -> schema.proto.PathElem.KeyEntry
-	32, // 36: schema.proto.Path.elem:type_name -> schema.proto.PathElem
-	6,  // 37: schema.proto.SchemaServer.GetSchemaDetails:input_type -> schema.proto.GetSchemaDetailsRequest
-	8,  // 38: schema.proto.SchemaServer.ListSchema:input_type -> schema.proto.ListSchemaRequest
-	10, // 39: schema.proto.SchemaServer.GetSchema:input_type -> schema.proto.GetSchemaRequest
-	12, // 40: schema.proto.SchemaServer.CreateSchema:input_type -> schema.proto.CreateSchemaRequest
-	14, // 41: schema.proto.SchemaServer.ReloadSchema:input_type -> schema.proto.ReloadSchemaRequest
-	16, // 42: schema.proto.SchemaServer.DeleteSchema:input_type -> schema.proto.DeleteSchemaRequest
-	18, // 43: schema.proto.SchemaServer.UploadSchema:input_type -> schema.proto.UploadSchemaRequest
-	20, // 44: schema.proto.SchemaServer.ToPath:input_type -> schema.proto.ToPathRequest
-	22, // 45: schema.proto.SchemaServer.ExpandPath:input_type -> schema.proto.ExpandPathRequest
-	10, // 46: schema.proto.SchemaServer.GetSchemaElements:input_type -> schema.proto.GetSchemaRequest
-	7,  // 47: schema.proto.SchemaServer.GetSchemaDetails:output_type -> schema.proto.GetSchemaDetailsResponse
-	9,  // 48: schema.proto.SchemaServer.ListSchema:output_type -> schema.proto.ListSchemaResponse
-	11, // 49: schema.proto.SchemaServer.GetSchema:output_type -> schema.proto.GetSchemaResponse
-	13, // 50: schema.proto.SchemaServer.CreateSchema:output_type -> schema.proto.CreateSchemaResponse
-	15, // 51: schema.proto.SchemaServer.ReloadSchema:output_type -> schema.proto.ReloadSchemaResponse
-	17, // 52: schema.proto.SchemaServer.DeleteSchema:output_type -> schema.proto.DeleteSchemaResponse
-	26, // 53: schema.proto.SchemaServer.UploadSchema:output_type -> schema.proto.UploadSchemaResponse
-	21, // 54: schema.proto.SchemaServer.ToPath:output_type -> schema.proto.ToPathResponse
-	23, // 55: schema.proto.SchemaServer.ExpandPath:output_type -> schema.proto.ExpandPathResponse
-	11, // 56: schema.proto.SchemaServer.GetSchemaElements:output_type -> schema.proto.GetSchemaResponse
-	47, // [47:57] is the sub-list for method output_type
-	37, // [37:47] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	12, // 6: schema.proto.GetSchemaResponse.schema:type_name -> schema.proto.SchemaElem
+	28, // 7: schema.proto.SchemaElem.container:type_name -> schema.proto.ContainerSchema
+	30, // 8: schema.proto.SchemaElem.field:type_name -> schema.proto.LeafSchema
+	29, // 9: schema.proto.SchemaElem.leaflist:type_name -> schema.proto.LeafListSchema
+	5,  // 10: schema.proto.CreateSchemaRequest.schema:type_name -> schema.proto.Schema
+	5,  // 11: schema.proto.CreateSchemaResponse.schema:type_name -> schema.proto.Schema
+	5,  // 12: schema.proto.ReloadSchemaRequest.schema:type_name -> schema.proto.Schema
+	5,  // 13: schema.proto.DeleteSchemaRequest.schema:type_name -> schema.proto.Schema
+	13, // 14: schema.proto.UploadSchemaRequest.create_schema:type_name -> schema.proto.CreateSchemaRequest
+	20, // 15: schema.proto.UploadSchemaRequest.schema_file:type_name -> schema.proto.UploadSchemaFile
+	26, // 16: schema.proto.UploadSchemaRequest.finalize:type_name -> schema.proto.UploadSchemaFinalize
+	3,  // 17: schema.proto.UploadSchemaFile.file_type:type_name -> schema.proto.UploadSchemaFile.FileType
+	25, // 18: schema.proto.UploadSchemaFile.hash:type_name -> schema.proto.Hash
+	5,  // 19: schema.proto.ToPathRequest.schema:type_name -> schema.proto.Schema
+	34, // 20: schema.proto.ToPathResponse.path:type_name -> schema.proto.Path
+	34, // 21: schema.proto.ExpandPathRequest.path:type_name -> schema.proto.Path
+	5,  // 22: schema.proto.ExpandPathRequest.schema:type_name -> schema.proto.Schema
+	2,  // 23: schema.proto.ExpandPathRequest.data_type:type_name -> schema.proto.DataType
+	34, // 24: schema.proto.ExpandPathResponse.path:type_name -> schema.proto.Path
+	4,  // 25: schema.proto.Hash.method:type_name -> schema.proto.Hash.HashMethod
+	30, // 26: schema.proto.ContainerSchema.keys:type_name -> schema.proto.LeafSchema
+	30, // 27: schema.proto.ContainerSchema.fields:type_name -> schema.proto.LeafSchema
+	29, // 28: schema.proto.ContainerSchema.leaflists:type_name -> schema.proto.LeafListSchema
+	32, // 29: schema.proto.ContainerSchema.must_statements:type_name -> schema.proto.MustStatement
+	31, // 30: schema.proto.LeafListSchema.type:type_name -> schema.proto.SchemaLeafType
+	32, // 31: schema.proto.LeafListSchema.must_statements:type_name -> schema.proto.MustStatement
+	31, // 32: schema.proto.LeafSchema.type:type_name -> schema.proto.SchemaLeafType
+	32, // 33: schema.proto.LeafSchema.must_statements:type_name -> schema.proto.MustStatement
+	35, // 34: schema.proto.SchemaLeafType.patterns:type_name -> schema.proto.SchemaPattern
+	31, // 35: schema.proto.SchemaLeafType.union_types:type_name -> schema.proto.SchemaLeafType
+	36, // 36: schema.proto.PathElem.key:type_name -> schema.proto.PathElem.KeyEntry
+	33, // 37: schema.proto.Path.elem:type_name -> schema.proto.PathElem
+	6,  // 38: schema.proto.SchemaServer.GetSchemaDetails:input_type -> schema.proto.GetSchemaDetailsRequest
+	8,  // 39: schema.proto.SchemaServer.ListSchema:input_type -> schema.proto.ListSchemaRequest
+	10, // 40: schema.proto.SchemaServer.GetSchema:input_type -> schema.proto.GetSchemaRequest
+	13, // 41: schema.proto.SchemaServer.CreateSchema:input_type -> schema.proto.CreateSchemaRequest
+	15, // 42: schema.proto.SchemaServer.ReloadSchema:input_type -> schema.proto.ReloadSchemaRequest
+	17, // 43: schema.proto.SchemaServer.DeleteSchema:input_type -> schema.proto.DeleteSchemaRequest
+	19, // 44: schema.proto.SchemaServer.UploadSchema:input_type -> schema.proto.UploadSchemaRequest
+	21, // 45: schema.proto.SchemaServer.ToPath:input_type -> schema.proto.ToPathRequest
+	23, // 46: schema.proto.SchemaServer.ExpandPath:input_type -> schema.proto.ExpandPathRequest
+	10, // 47: schema.proto.SchemaServer.GetSchemaElements:input_type -> schema.proto.GetSchemaRequest
+	7,  // 48: schema.proto.SchemaServer.GetSchemaDetails:output_type -> schema.proto.GetSchemaDetailsResponse
+	9,  // 49: schema.proto.SchemaServer.ListSchema:output_type -> schema.proto.ListSchemaResponse
+	11, // 50: schema.proto.SchemaServer.GetSchema:output_type -> schema.proto.GetSchemaResponse
+	14, // 51: schema.proto.SchemaServer.CreateSchema:output_type -> schema.proto.CreateSchemaResponse
+	16, // 52: schema.proto.SchemaServer.ReloadSchema:output_type -> schema.proto.ReloadSchemaResponse
+	18, // 53: schema.proto.SchemaServer.DeleteSchema:output_type -> schema.proto.DeleteSchemaResponse
+	27, // 54: schema.proto.SchemaServer.UploadSchema:output_type -> schema.proto.UploadSchemaResponse
+	22, // 55: schema.proto.SchemaServer.ToPath:output_type -> schema.proto.ToPathResponse
+	24, // 56: schema.proto.SchemaServer.ExpandPath:output_type -> schema.proto.ExpandPathResponse
+	11, // 57: schema.proto.SchemaServer.GetSchemaElements:output_type -> schema.proto.GetSchemaResponse
+	48, // [48:58] is the sub-list for method output_type
+	38, // [38:48] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_schema_proto_init() }
@@ -2986,7 +3039,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateSchemaRequest); i {
+			switch v := v.(*SchemaElem); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2998,7 +3051,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateSchemaResponse); i {
+			switch v := v.(*CreateSchemaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3010,7 +3063,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReloadSchemaRequest); i {
+			switch v := v.(*CreateSchemaResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3022,7 +3075,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ReloadSchemaResponse); i {
+			switch v := v.(*ReloadSchemaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3034,7 +3087,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteSchemaRequest); i {
+			switch v := v.(*ReloadSchemaResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3046,7 +3099,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteSchemaResponse); i {
+			switch v := v.(*DeleteSchemaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3058,7 +3111,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UploadSchemaRequest); i {
+			switch v := v.(*DeleteSchemaResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3070,7 +3123,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UploadSchemaFile); i {
+			switch v := v.(*UploadSchemaRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3082,7 +3135,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ToPathRequest); i {
+			switch v := v.(*UploadSchemaFile); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3094,7 +3147,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ToPathResponse); i {
+			switch v := v.(*ToPathRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3106,7 +3159,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExpandPathRequest); i {
+			switch v := v.(*ToPathResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3118,7 +3171,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ExpandPathResponse); i {
+			switch v := v.(*ExpandPathRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3130,7 +3183,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Hash); i {
+			switch v := v.(*ExpandPathResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3142,7 +3195,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UploadSchemaFinalize); i {
+			switch v := v.(*Hash); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3154,7 +3207,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UploadSchemaResponse); i {
+			switch v := v.(*UploadSchemaFinalize); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3166,7 +3219,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ContainerSchema); i {
+			switch v := v.(*UploadSchemaResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3178,7 +3231,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LeafListSchema); i {
+			switch v := v.(*ContainerSchema); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3190,7 +3243,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*LeafSchema); i {
+			switch v := v.(*LeafListSchema); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3202,7 +3255,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SchemaLeafType); i {
+			switch v := v.(*LeafSchema); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3214,7 +3267,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[26].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*MustStatement); i {
+			switch v := v.(*SchemaLeafType); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3226,7 +3279,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[27].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PathElem); i {
+			switch v := v.(*MustStatement); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3238,7 +3291,7 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[28].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Path); i {
+			switch v := v.(*PathElem); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -3250,6 +3303,18 @@ func file_schema_proto_init() {
 			}
 		}
 		file_schema_proto_msgTypes[29].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Path); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_schema_proto_msgTypes[30].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*SchemaPattern); i {
 			case 0:
 				return &v.state
@@ -3262,12 +3327,12 @@ func file_schema_proto_init() {
 			}
 		}
 	}
-	file_schema_proto_msgTypes[6].OneofWrappers = []interface{}{
-		(*GetSchemaResponse_Container)(nil),
-		(*GetSchemaResponse_Field)(nil),
-		(*GetSchemaResponse_Leaflist)(nil),
+	file_schema_proto_msgTypes[7].OneofWrappers = []interface{}{
+		(*SchemaElem_Container)(nil),
+		(*SchemaElem_Field)(nil),
+		(*SchemaElem_Leaflist)(nil),
 	}
-	file_schema_proto_msgTypes[13].OneofWrappers = []interface{}{
+	file_schema_proto_msgTypes[14].OneofWrappers = []interface{}{
 		(*UploadSchemaRequest_CreateSchema)(nil),
 		(*UploadSchemaRequest_SchemaFile)(nil),
 		(*UploadSchemaRequest_Finalize)(nil),
@@ -3278,7 +3343,7 @@ func file_schema_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_schema_proto_rawDesc,
 			NumEnums:      5,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

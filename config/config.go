@@ -15,12 +15,9 @@ import (
 )
 
 type Config struct {
-	GRPCServer   *GRPCServer         `yaml:"grpc-server,omitempty" json:"grpc-server,omitempty"`
-	Schemas      []*SchemaConfig     `yaml:"schemas,omitempty" json:"schemas,omitempty"`
-	Datastores   []*DatastoreConfig  `yaml:"datastores,omitempty" json:"datastores,omitempty"`
-	SchemaServer *RemoteSchemaServer `yaml:"schema-server,omitempty" json:"schema-server,omitempty"`
-	Cache        *CacheConfig        `yaml:"cache,omitempty" json:"cache,omitempty"`
-	Prometheus   *PromConfig         `yaml:"prometheus,omitempty" json:"prometheus,omitempty"`
+	GRPCServer *GRPCServer     `yaml:"grpc-server,omitempty" json:"grpc-server,omitempty"`
+	Schemas    []*SchemaConfig `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Prometheus *PromConfig     `yaml:"prometheus,omitempty" json:"prometheus,omitempty"`
 }
 
 type TLS struct {
@@ -58,21 +55,10 @@ func (c *Config) validateSetDefaults() error {
 		c.GRPCServer.RPCTimeout = time.Minute
 	}
 	var err error
-	for _, ds := range c.Datastores {
-		if err = ds.validateSetDefaults(); err != nil {
-			return err
-		}
-	}
 	for _, sc := range c.Schemas {
-		if err := sc.validateSetDefaults(); err != nil {
+		if err = sc.validateSetDefaults(); err != nil {
 			return err
 		}
-	}
-	if c.Cache == nil {
-		c.Cache = &CacheConfig{}
-	}
-	if err = c.Cache.validateSetDefaults(); err != nil {
-		return err
 	}
 	return nil
 }
@@ -86,7 +72,6 @@ type GRPCServer struct {
 	Address        string        `yaml:"address,omitempty" json:"address,omitempty"`
 	TLS            *TLS          `yaml:"tls,omitempty" json:"tls,omitempty"`
 	SchemaServer   *SchemaServer `yaml:"schema-server,omitempty" json:"schema-server,omitempty"`
-	DataServer     *DataServer   `yaml:"data-server,omitempty" json:"data-server,omitempty"`
 	MaxRecvMsgSize int           `yaml:"max-recv-msg-size,omitempty" json:"max-recv-msg-size,omitempty"`
 	RPCTimeout     time.Duration `yaml:"rpc-timeout,omitempty" json:"rpc-timeout,omitempty"`
 }
@@ -122,11 +107,6 @@ func (t *TLS) NewConfig(ctx context.Context) (*tls.Config, error) {
 }
 
 type SchemaServer struct {
-	Enabled          bool   `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	// Enabled          bool   `yaml:"enabled,omitempty" json:"enabled,omitempty"`
 	SchemasDirectory string `yaml:"schemas-directory,omitempty" json:"schemas-directory,omitempty"`
-}
-
-type DataServer struct {
-	Enabled       bool `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	MaxCandidates int  `yaml:"max-candidates,omitempty" json:"max-candidates,omitempty"`
 }
