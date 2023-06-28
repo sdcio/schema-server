@@ -29,20 +29,14 @@ func Execute() {
 }
 
 var addr string
+var format string
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
-
 	rootCmd.PersistentFlags().StringVarP(&addr, "address", "a", "localhost:55000", "schema server address")
 	rootCmd.PersistentFlags().StringVar(&schemaName, "name", "", "schema name")
 	rootCmd.PersistentFlags().StringVar(&schemaVendor, "vendor", "", "schema vendor")
 	rootCmd.PersistentFlags().StringVar(&schemaVersion, "version", "", "schema version")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringVar(&format, "format", "", "output format")
 }
 
 func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServerClient, error) {

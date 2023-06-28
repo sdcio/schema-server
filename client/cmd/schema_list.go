@@ -6,7 +6,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 
@@ -33,7 +35,23 @@ var schemaListCmd = &cobra.Command{
 			return err
 		}
 		fmt.Println("response:")
-		fmt.Println(prototext.Format(schemaList))
+		switch format {
+		case "table":
+			tableData := make([][]string, 0, len(schemaList.GetSchema()))
+			for _, schema := range schemaList.GetSchema() {
+				tableData = append(tableData, []string{schema.GetName(), schema.GetVendor(), schema.GetVersion()})
+			}
+			table := tablewriter.NewWriter(os.Stdout)
+			table.SetHeader([]string{"Name", "Vendor", "Version"})
+			table.SetAlignment(tablewriter.ALIGN_LEFT)
+			table.SetAutoFormatHeaders(false)
+			table.SetAutoWrapText(false)
+			table.AppendBulk(tableData)
+			table.Render()
+		default:
+			fmt.Println(prototext.Format(schemaList))
+		}
+
 		return nil
 	},
 }
