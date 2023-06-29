@@ -14,8 +14,9 @@ import (
 
 // schemaReloadCmd represents the reload command
 var schemaReloadCmd = &cobra.Command{
-	Use:   "reload",
-	Short: "reload schema",
+	Use:          "reload",
+	Short:        "reload schema",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

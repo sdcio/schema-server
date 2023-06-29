@@ -153,19 +153,22 @@ func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error 
 		if ee, ok := e.Dir[nxt]; ok {
 			return sc.buildPath(pe[count:], p, ee)
 		}
-		return fmt.Errorf("unknown element %s", nxt)
+		return fmt.Errorf("list - unknown element %s", nxt)
 
 	case e.IsCase():
-		if ee, ok := e.Dir[pe[0]]; ok {
-			return sc.buildPath(pe, p, ee)
+		for _, ee := range e.Dir {
+			if eee, ok := ee.Dir[pe[0]]; ok {
+				return sc.buildPath(pe, p, eee)
+			}
 		}
-		return fmt.Errorf("unknown element %s", pe[0])
+
+		return fmt.Errorf("case - unknown element %s", pe[0])
 	case e.IsChoice():
 		p.Elem = append(p.Elem, cpe)
 		if ee, ok := e.Dir[pe[0]]; ok {
 			return sc.buildPath(pe[1:], p, ee)
 		}
-		return fmt.Errorf("unknown element %s", pe[0])
+		return fmt.Errorf("choice - unknown element %s", pe[0])
 	case e.IsContainer():
 		if ee, ok := e.Dir[e.Name]; ee != nil && ok {
 			if ee.IsCase() || ee.IsChoice() {
@@ -187,15 +190,15 @@ func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error 
 				}
 			}
 		}
-		return fmt.Errorf("unknown element %v", pe[1])
+		return fmt.Errorf("container - unknown element %v", pe[1])
 	case e.IsLeaf():
 		if lpe != 1 {
-			return fmt.Errorf("unknown element %v", pe[0])
+			return fmt.Errorf("leaf - unknown element %v", pe[0])
 		}
 		p.Elem = append(p.Elem, cpe)
 	case e.IsLeafList():
 		if lpe != 1 {
-			return fmt.Errorf("unknown element %v", pe[0])
+			return fmt.Errorf("leafList - unknown element %v", pe[0])
 		}
 		p.Elem = append(p.Elem, cpe)
 	}

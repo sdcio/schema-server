@@ -11,8 +11,9 @@ import (
 
 // schemaUploadCmd represents the upload command
 var schemaUploadCmd = &cobra.Command{
-	Use:   "upload",
-	Short: "A brief description of your command",
+	Use:          "upload",
+	Short:        "A brief description of your command",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

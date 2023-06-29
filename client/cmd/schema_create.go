@@ -18,8 +18,9 @@ var schemaExcludes []string
 
 // schemaCreateCmd represents the create command
 var schemaCreateCmd = &cobra.Command{
-	Use:   "create",
-	Short: "create a schema",
+	Use:          "create",
+	Short:        "create a schema",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

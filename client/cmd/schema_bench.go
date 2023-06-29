@@ -17,9 +17,9 @@ import (
 
 // schemaBenchCmd represents the bench command
 var schemaBenchCmd = &cobra.Command{
-	Use:   "bench",
-	Short: "bench schemas",
-
+	Use:           "bench",
+	Short:         "bench schemas",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		p, err := utils.ParsePath(xpath)
 		if err != nil {
