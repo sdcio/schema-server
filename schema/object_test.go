@@ -597,18 +597,20 @@ func Test_getChildren(t *testing.T) {
 							Kind: yang.DirectoryEntry,
 							Name: "c3",
 						},
-						"ch1": {Node: &yang.Choice{}, Name: "ch1", Kind: yang.ChoiceEntry, Dir: map[string]*yang.Entry{
-							"case1": {
-								Node: &yang.Container{},
-								Kind: yang.CaseEntry,
-								Name: "c1",
-							},
-							"case2": {
-								Node: &yang.Container{},
-								Kind: yang.CaseEntry,
-								Name: "c2",
-							},
-						}},
+						"ch1": {Node: &yang.Choice{}, Name: "ch1",
+							Kind: yang.ChoiceEntry,
+							Dir: map[string]*yang.Entry{
+								"case1": {
+									Node: &yang.Container{},
+									Kind: yang.CaseEntry,
+									Name: "c1",
+								},
+								"case2": {
+									Node: &yang.Container{},
+									Kind: yang.CaseEntry,
+									Name: "c2",
+								},
+							}},
 					},
 					Key:        "",
 					Type:       &yang.YangType{},
