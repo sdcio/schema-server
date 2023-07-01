@@ -41,5 +41,5 @@ bin/schemac schema to-path --name sros --version 22.10 --vendor Nokia --path con
 bin/schemac schema expand --name sros --version 22.10 --vendor Nokia --path /configure/service --xpath
 bin/schemac schema expand --name sros --version 22.10 --vendor Nokia --path /configure/filter/ip-filter --xpath
 #
-bin/schemac schema bench --name srl --version 22.10 --vendor Nokia --path /configure
+bin/schemac schema bench --name sros --version 22.10 --vendor Nokia --path /configure
 ```
