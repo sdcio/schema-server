@@ -17,9 +17,9 @@ import (
 
 // schemaListCmd represents the list command
 var schemaListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "list schemas",
-
+	Use:          "list",
+	Short:        "list schemas",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

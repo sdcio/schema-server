@@ -30,6 +30,7 @@ func Execute() {
 
 var addr string
 var format string
+var maxRcvMsg int
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&addr, "address", "a", "localhost:55000", "schema server address")
@@ -37,6 +38,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&schemaVendor, "vendor", "", "schema vendor")
 	rootCmd.PersistentFlags().StringVar(&schemaVersion, "version", "", "schema version")
 	rootCmd.PersistentFlags().StringVar(&format, "format", "", "output format")
+	rootCmd.PersistentFlags().IntVar(&maxRcvMsg, "max-rcv-msg", 25165824, "the maximum message size in bytes the client can receive")
 }
 
 func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServerClient, error) {
@@ -47,6 +49,7 @@ func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServer
 		grpc.WithTransportCredentials(
 			insecure.NewCredentials(),
 		),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxRcvMsg)),
 	)
 	if err != nil {
 		return nil, err

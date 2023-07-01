@@ -14,8 +14,9 @@ import (
 
 // schemaToPathCmd represents the to-path command
 var schemaToPathCmd = &cobra.Command{
-	Use:   "to-path",
-	Short: "convert a list of path elements and key values to a valid path",
+	Use:          "to-path",
+	Short:        "convert a list of path elements and key values to a valid path",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()

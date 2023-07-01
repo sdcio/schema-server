@@ -16,7 +16,7 @@ build:
 	mkdir -p bin
 	CGO_ENABLED=0 ${GO_BIN} build -o bin/schemac client/main.go 
 	CGO_ENABLED=0 ${GO_BIN} build -o bin/schema-server main.go
-	CGO_ENABLED=0 ${GO_BIN} build -o bin/bulk tests/bulk/main.go
+	# CGO_ENABLED=0 ${GO_BIN} build -o bin/bulk tests/bulk/main.go
 
 test:
 	robot tests/robot

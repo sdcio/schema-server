@@ -14,9 +14,9 @@ import (
 
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "delete schema",
-
+	Use:          "delete",
+	Short:        "delete schema",
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := context.WithCancel(cmd.Context())
 		defer cancel()
