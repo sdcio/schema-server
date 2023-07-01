@@ -121,7 +121,14 @@ func (sc *Schema) BuildPath(pe []string, p *schemapb.Path) error {
 }
 
 func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error {
+	log.Tracef("buildPath START")
 	log.Tracef("buildPath: remainingPathElems=%v, path=%v", pe, p)
+	log.Tracef("received PE=%v", pe)
+	log.Tracef("current path=%v", p)
+	log.Tracef("YANG entry=%v isChoice=%v, isCase=%v", e.Name, e.IsChoice(), e.IsCase())
+	log.Tracef("YANG children: %v", e.Dir)
+	log.Tracef("buildPath END")
+
 	lpe := len(pe)
 	cpe := &schemapb.PathElem{
 		Name: e.Name,
@@ -130,6 +137,7 @@ func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error 
 		p.Elem = append(p.Elem, cpe)
 		return nil
 	}
+
 	switch {
 	case e.IsList():
 		if cpe.GetKey() == nil {
@@ -153,52 +161,56 @@ func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error 
 		if ee, ok := e.Dir[nxt]; ok {
 			return sc.buildPath(pe[count:], p, ee)
 		}
-		return fmt.Errorf("list - unknown element %s", nxt)
-
-	case e.IsCase():
-		for _, ee := range e.Dir {
-			if eee, ok := ee.Dir[pe[0]]; ok {
-				return sc.buildPath(pe, p, eee)
-			}
-		}
-
-		return fmt.Errorf("case - unknown element %s", pe[0])
+		return fmt.Errorf("list %s - unknown element %s", e.Name, nxt)
 	case e.IsChoice():
 		p.Elem = append(p.Elem, cpe)
 		if ee, ok := e.Dir[pe[0]]; ok {
 			return sc.buildPath(pe[1:], p, ee)
 		}
-		return fmt.Errorf("choice - unknown element %s", pe[0])
+		return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
+	case e.IsCase():
+		// RFC7950 7.9.2: A case node does not exist in the data tree.
+		// p.Elem = append(p.Elem, cpe)
+		if ee, ok := e.Dir[pe[0]]; ok {
+			return sc.buildPath(pe[1:], p, ee)
+		}
+		if ee, ok := e.Dir[e.Name]; ok {
+			return sc.buildPath(pe, p, ee)
+		}
+		return fmt.Errorf("case %s - unknown element %s", e.Name, pe[0])
 	case e.IsContainer():
 		if ee, ok := e.Dir[e.Name]; ee != nil && ok {
 			if ee.IsCase() || ee.IsChoice() {
 				return sc.buildPath(pe[1:], p, ee)
 			}
 		}
+
 		p.Elem = append(p.Elem, cpe)
+		if ee, ok := e.Dir[pe[0]]; ok {
+			return sc.buildPath(pe, p, ee)
+		}
 		if lpe == 1 {
 			return nil
 		}
 		if ee, ok := e.Dir[pe[1]]; ok {
 			return sc.buildPath(pe[1:], p, ee)
-		} else {
-			for _, ee := range e.Dir {
-				if ee.IsCase() || ee.IsChoice() {
-					if eee, ok := ee.Dir[pe[1]]; ok {
-						return sc.buildPath(pe[1:], p, eee)
-					}
+		}
+		for _, ee := range e.Dir {
+			if ee.IsCase() || ee.IsChoice() {
+				if eee, ok := ee.Dir[pe[1]]; ok {
+					return sc.buildPath(pe[1:], p, eee)
 				}
 			}
 		}
-		return fmt.Errorf("container - unknown element %v", pe[1])
+		return fmt.Errorf("container %s - unknown element %v", e.Name, pe[1])
 	case e.IsLeaf():
 		if lpe != 1 {
-			return fmt.Errorf("leaf - unknown element %v", pe[0])
+			return fmt.Errorf("leaf %s - unknown element %v", e.Name, pe[0])
 		}
 		p.Elem = append(p.Elem, cpe)
 	case e.IsLeafList():
 		if lpe != 1 {
-			return fmt.Errorf("leafList - unknown element %v", pe[0])
+			return fmt.Errorf("leafList %s - unknown element %v", e.Name, pe[0])
 		}
 		p.Elem = append(p.Elem, cpe)
 	}

@@ -34,7 +34,7 @@ bin/schemac schema get --name sros --version 22.10 --vendor Nokia --path /config
 bin/schemac schema get --name sros --version 22.10 --vendor Nokia --path /configure/service
 bin/schemac schema get --name sros --version 22.10 --vendor Nokia --path /configure/filter/ip-filter/entry/match
 
-bin/schemac schema to-path --name sros --version 22.10 --vendor Nokia --cp configure,service,vprn,v1,interface
+bin/schemac schema to-path --name sros --version 22.10 --vendor Nokia --cp configure,service,vprn,srv1,interface
 bin/schemac schema to-path --name sros --version 22.10 --vendor Nokia --cp configure,filter,ip-filter,filter-1,entry,1,action,nat
 bin/schemac schema to-path --name sros --version 22.10 --vendor Nokia --path configure,filter,ip-filter,f1,entry,1,match
 

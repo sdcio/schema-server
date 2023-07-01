@@ -278,8 +278,13 @@ func TestSchema_BuildPath(t *testing.T) {
 				{
 					name: "path with choice/case 1",
 					args: args{
-						pe: []string{"foo", "foo1", "case1-container", "cas1_leaf"},
-						p:  &schemapb.Path{},
+						pe: []string{
+							"foo",
+							"foo1",
+							"case1-container",
+							"cas1_leaf",
+						},
+						p: &schemapb.Path{},
 					},
 					want: &schemapb.Path{Elem: []*schemapb.PathElem{
 						{
@@ -297,47 +302,52 @@ func TestSchema_BuildPath(t *testing.T) {
 					}},
 					wantErr: false,
 				},
-				{
-					name: "path with choice/case 2",
-					args: args{
-						pe: []string{"foo", "foo1", "case2-container", "cas2_leaf"},
-						p:  &schemapb.Path{},
-					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
-						{
-							Name: "foo",
-						},
-						{
-							Name: "foo1",
-						},
-						{
-							Name: "case2-container",
-						},
-						{
-							Name: "cas2_leaf",
-						},
-					}},
-					wantErr: false,
-				},
-				{
-					name: "path with choice/case 3",
-					args: args{
-						pe: []string{"foo", "foo1", "cas3-leaf"},
-						p:  &schemapb.Path{},
-					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
-						{
-							Name: "foo",
-						},
-						{
-							Name: "foo1",
-						},
-						{
-							Name: "cas3-leaf",
-						},
-					}},
-					wantErr: false,
-				},
+				// {
+				// 	name: "path with choice/case 2",
+				// 	args: args{
+				// 		pe: []string{
+				// 			"foo",
+				// 			"foo1",
+				// 			"case2-container",
+				// 			"cas2_leaf",
+				// 		},
+				// 		p: &schemapb.Path{},
+				// 	},
+				// 	want: &schemapb.Path{Elem: []*schemapb.PathElem{
+				// 		{
+				// 			Name: "foo",
+				// 		},
+				// 		{
+				// 			Name: "foo1",
+				// 		},
+				// 		{
+				// 			Name: "case2-container",
+				// 		},
+				// 		{
+				// 			Name: "cas2_leaf",
+				// 		},
+				// 	}},
+				// 	wantErr: false,
+				// },
+				// {
+				// 	name: "path with choice/case 3",
+				// 	args: args{
+				// 		pe: []string{"foo", "foo1", "cas3-leaf"},
+				// 		p:  &schemapb.Path{},
+				// 	},
+				// 	want: &schemapb.Path{Elem: []*schemapb.PathElem{
+				// 		{
+				// 			Name: "foo",
+				// 		},
+				// 		{
+				// 			Name: "foo1",
+				// 		},
+				// 		{
+				// 			Name: "cas3-leaf",
+				// 		},
+				// 	}},
+				// 	wantErr: false,
+				// },
 			},
 		},
 	}

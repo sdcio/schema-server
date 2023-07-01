@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -82,13 +82,22 @@ func NewServer(c *config.Config) (*Server, error) {
 
 	s.srv = grpc.NewServer(opts...)
 	// parse schemas
+	log.Infof("parsing %d schema(s)...", len(c.Schemas))
+	wg := new(sync.WaitGroup)
+	wg.Add(len(c.Schemas))
 	for _, sCfg := range c.Schemas {
-		sc, err := schema.NewSchema(sCfg)
-		if err != nil {
-			return nil, fmt.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
-		}
-		s.schemaStore.AddSchema(sc)
+		go func(sCfg *config.SchemaConfig) {
+			defer wg.Done()
+			sc, err := schema.NewSchema(sCfg)
+			if err != nil {
+				log.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
+				// return nil, fmt.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
+				return
+			}
+			s.schemaStore.AddSchema(sc)
+		}(sCfg)
 	}
+	wg.Wait()
 	// register Schema server gRPC Methods
 	schemapb.RegisterSchemaServerServer(s.srv, s)
 	return s, nil
