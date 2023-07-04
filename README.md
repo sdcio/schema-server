@@ -19,6 +19,7 @@ make build
 ```shell
 # schema
 bin/schemac schema get --name srl --version 22.11.1 --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface
+bin/schemac schema get --name srl --version 22.11.1 --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface --all
 bin/schemac schema get --name srl --version 22.11.1 --vendor Nokia --path /acl/cpm-filter/ipv4-filter/entry/action/accept/rate-limit/system-cpu-policer
 bin/schemac schema to-path --name srl --version 22.11.1 --vendor Nokia --cp interface,mgmt0,admin-state
 bin/schemac schema to-path --name srl --version 22.11.1 --vendor Nokia --cp acl,cpm-filter,ipv4-filter,entry,1,action,accept,rate-limit,system-cpu-policer
