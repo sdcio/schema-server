@@ -11,7 +11,7 @@ require (
 	github.com/openconfig/gnmi v0.9.1
 	github.com/openconfig/goyang v1.4.0
 	github.com/prometheus/client_golang v1.16.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/sync v0.3.0
 	google.golang.org/grpc v1.56.1
