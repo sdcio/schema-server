@@ -314,7 +314,10 @@ func (s *Store) GetSchemaElements(ctx context.Context, req *schemapb.GetSchemaRe
 			log.Errorf("failed getting entries from schema: %v", err)
 		}
 	}()
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		defer close(sch)
+	}()
 
 	return sch, nil
 }
