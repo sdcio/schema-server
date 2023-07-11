@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/iptecharch/schema-server/config"
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 )
 
@@ -16,7 +16,7 @@ func TestSchema_BuildPath(t *testing.T) {
 	}
 	type args struct {
 		pe []string
-		p  *schemapb.Path
+		p  *sdcpb.Path
 	}
 	tests := []struct {
 		name      string
@@ -24,7 +24,7 @@ func TestSchema_BuildPath(t *testing.T) {
 		testItems []struct {
 			name    string
 			args    args
-			want    *schemapb.Path
+			want    *sdcpb.Path
 			wantErr bool
 		}
 	}{
@@ -47,16 +47,16 @@ func TestSchema_BuildPath(t *testing.T) {
 			testItems: []struct {
 				name    string
 				args    args
-				want    *schemapb.Path
+				want    *sdcpb.Path
 				wantErr bool
 			}{
 				{
 					name: "path with key",
 					args: args{
 						pe: []string{"interface", "mgmt0"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "interface",
 							Key:  map[string]string{"name": "mgmt0"},
@@ -68,9 +68,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "path with intermediate key",
 					args: args{
 						pe: []string{"interface", "mgmt0", "subinterface"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "interface",
 							Key:  map[string]string{"name": "mgmt0"},
@@ -85,9 +85,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "path with 2 intermediate key",
 					args: args{
 						pe: []string{"interface", "mgmt0", "subinterface", "0", "admin-state"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "interface",
 							Key:  map[string]string{"name": "mgmt0"},
@@ -106,9 +106,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "path with choice/case",
 					args: args{
 						pe: []string{"acl", "cpm-filter", "ipv4-filter", "entry", "0", "action", "accept"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "acl",
 						},
@@ -150,16 +150,16 @@ func TestSchema_BuildPath(t *testing.T) {
 			testItems: []struct {
 				name    string
 				args    args
-				want    *schemapb.Path
+				want    *sdcpb.Path
 				wantErr bool
 			}{
 				{
 					name: "single path elem",
 					args: args{
 						pe: []string{"foo"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -170,9 +170,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "two path elem with key",
 					args: args{
 						pe: []string{"foo", "bar", "kv1"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -187,9 +187,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "two path elem with 2 keys",
 					args: args{
 						pe: []string{"foo", "bar", "kv1", "kv2"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -207,9 +207,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "two path elem with 2 keys and sub leaf",
 					args: args{
 						pe: []string{"foo", "bar", "kv1", "kv2", "attr1"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -230,9 +230,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "two path elem with 2 keys and sub container",
 					args: args{
 						pe: []string{"foo", "bar", "kv1", "kv2", "subbar"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -253,9 +253,9 @@ func TestSchema_BuildPath(t *testing.T) {
 					name: "two path elem with 2 keys and sub container and leaf",
 					args: args{
 						pe: []string{"foo", "bar", "kv1", "kv2", "subbar", "subattr1"},
-						p:  &schemapb.Path{},
+						p:  &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -284,9 +284,9 @@ func TestSchema_BuildPath(t *testing.T) {
 							"case1-container",
 							"cas1_leaf",
 						},
-						p: &schemapb.Path{},
+						p: &sdcpb.Path{},
 					},
-					want: &schemapb.Path{Elem: []*schemapb.PathElem{
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 						{
 							Name: "foo",
 						},
@@ -311,9 +311,9 @@ func TestSchema_BuildPath(t *testing.T) {
 				// 			"case2-container",
 				// 			"cas2_leaf",
 				// 		},
-				// 		p: &schemapb.Path{},
+				// 		p: &sdcpb.Path{},
 				// 	},
-				// 	want: &schemapb.Path{Elem: []*schemapb.PathElem{
+				// 	want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 				// 		{
 				// 			Name: "foo",
 				// 		},
@@ -333,9 +333,9 @@ func TestSchema_BuildPath(t *testing.T) {
 				// 	name: "path with choice/case 3",
 				// 	args: args{
 				// 		pe: []string{"foo", "foo1", "cas3-leaf"},
-				// 		p:  &schemapb.Path{},
+				// 		p:  &sdcpb.Path{},
 				// 	},
-				// 	want: &schemapb.Path{Elem: []*schemapb.PathElem{
+				// 	want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
 				// 		{
 				// 			Name: "foo",
 				// 		},
@@ -373,7 +373,7 @@ func TestSchema_BuildPath(t *testing.T) {
 	}
 }
 
-func comparePathElem(pe1, pe2 *schemapb.PathElem) bool {
+func comparePathElem(pe1, pe2 *sdcpb.PathElem) bool {
 	if pe1 == nil {
 		return pe2 == nil
 	}
@@ -396,7 +396,7 @@ func comparePathElem(pe1, pe2 *schemapb.PathElem) bool {
 	return true
 }
 
-func comparePaths(p1, p2 *schemapb.Path) bool {
+func comparePaths(p1, p2 *sdcpb.Path) bool {
 	if p1 == nil {
 		return p2 == nil
 	}

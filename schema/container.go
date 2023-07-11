@@ -4,19 +4,19 @@ import (
 	"sort"
 	"strings"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 )
 
-func containerFromYEntry(e *yang.Entry, withDesc bool) *schemapb.ContainerSchema {
-	c := &schemapb.ContainerSchema{
+func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
+	c := &sdcpb.ContainerSchema{
 		Name: e.Name,
 		// Description:    e.Description,
 		Owner:          "", // TODO:
 		Namespace:      e.Namespace().Name,
-		Keys:           []*schemapb.LeafSchema{},
-		Fields:         []*schemapb.LeafSchema{},
-		Leaflists:      []*schemapb.LeafListSchema{},
+		Keys:           []*sdcpb.LeafSchema{},
+		Fields:         []*sdcpb.LeafSchema{},
+		Leaflists:      []*sdcpb.LeafListSchema{},
 		Children:       []string{},
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
@@ -47,13 +47,13 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *schemapb.ContainerSchema
 		case child.IsLeaf(), child.IsLeafList():
 			o := SchemaElemFromYEntry(child, withDesc)
 			switch o := o.Schema.(type) {
-			case *schemapb.SchemaElem_Field:
+			case *sdcpb.SchemaElem_Field:
 				if _, ok := keys[child.Name]; ok {
 					c.Keys = append(c.Keys, o.Field)
 					continue
 				}
 				c.Fields = append(c.Fields, o.Field)
-			case *schemapb.SchemaElem_Leaflist:
+			case *sdcpb.SchemaElem_Leaflist:
 				c.Leaflists = append(c.Leaflists, o.Leaflist)
 			}
 		}

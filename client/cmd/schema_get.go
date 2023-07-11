@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 )
@@ -34,9 +34,9 @@ var schemaGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		req := &schemapb.GetSchemaRequest{
+		req := &sdcpb.GetSchemaRequest{
 			Path: p,
-			Schema: &schemapb.Schema{
+			Schema: &sdcpb.Schema{
 				Name:    schemaName,
 				Vendor:  schemaVendor,
 				Version: schemaVersion,
@@ -66,7 +66,7 @@ func init() {
 	schemaGetCmd.PersistentFlags().BoolVarP(&withDesc, "with-desc", "", false, "include YANG entries descriptions")
 }
 
-func handleGetSchemaElems(ctx context.Context, scc schemapb.SchemaServerClient, req *schemapb.GetSchemaRequest) error {
+func handleGetSchemaElems(ctx context.Context, scc sdcpb.SchemaServerClient, req *sdcpb.GetSchemaRequest) error {
 	stream, err := scc.GetSchemaElements(ctx, req)
 	if err != nil {
 		return err

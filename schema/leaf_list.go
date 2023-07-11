@@ -1,12 +1,12 @@
 package schema
 
 import (
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 )
 
-func leafListFromYEntry(e *yang.Entry, withDesc bool) *schemapb.LeafListSchema {
-	ll := &schemapb.LeafListSchema{
+func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
+	ll := &sdcpb.LeafListSchema{
 		Name: e.Name,
 		// Description:    e.Description,
 		Owner:          "",

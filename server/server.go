@@ -11,8 +11,8 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/iptecharch/schema-server/config"
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/schema"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,7 +30,7 @@ type Server struct {
 	schemaStore *schema.Store
 
 	srv *grpc.Server
-	schemapb.UnimplementedSchemaServerServer
+	sdcpb.UnimplementedSchemaServerServer
 
 	router *mux.Router
 	reg    *prometheus.Registry
@@ -99,7 +99,7 @@ func NewServer(c *config.Config) (*Server, error) {
 	}
 	wg.Wait()
 	// register Schema server gRPC Methods
-	schemapb.RegisterSchemaServerServer(s.srv, s)
+	sdcpb.RegisterSchemaServerServer(s.srv, s)
 	return s, nil
 }
 

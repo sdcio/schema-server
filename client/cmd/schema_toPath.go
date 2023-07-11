@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 )
@@ -24,9 +24,9 @@ var schemaToPathCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		req := &schemapb.ToPathRequest{
+		req := &sdcpb.ToPathRequest{
 			PathElement: pathItems,
-			Schema: &schemapb.Schema{
+			Schema: &sdcpb.Schema{
 				Name:    schemaName,
 				Vendor:  schemaVendor,
 				Version: schemaVersion,

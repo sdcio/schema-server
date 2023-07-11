@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 )
@@ -28,8 +28,8 @@ var schemaCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		req := &schemapb.CreateSchemaRequest{
-			Schema: &schemapb.Schema{
+		req := &sdcpb.CreateSchemaRequest{
+			Schema: &sdcpb.Schema{
 				Name:    schemaName,
 				Vendor:  schemaVendor,
 				Version: schemaVersion,

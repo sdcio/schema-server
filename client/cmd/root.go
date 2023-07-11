@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -41,7 +41,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&maxRcvMsg, "max-rcv-msg", 25165824, "the maximum message size in bytes the client can receive")
 }
 
-func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServerClient, error) {
+func createSchemaClient(ctx context.Context, addr string) (sdcpb.SchemaServerClient, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, addr,
@@ -54,5 +54,5 @@ func createSchemaClient(ctx context.Context, addr string) (schemapb.SchemaServer
 	if err != nil {
 		return nil, err
 	}
-	return schemapb.NewSchemaServerClient(cc), nil
+	return sdcpb.NewSchemaServerClient(cc), nil
 }

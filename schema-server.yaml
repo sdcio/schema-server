@@ -30,6 +30,26 @@ schemas:
       - ./lab/common/yang/sros_22.10/YANG/nokia-sros-yang-extensions.yang
   - name: srl
     vendor: Nokia
+    version: 23.3.2
+    files:
+      - ./lab/common/yang/srl-23.3.2/srl_nokia/models
+    directories:
+      - ./lab/common/yang/srl-23.3.2/ietf
+      - ./lab/common/yang/srl-23.3.2/openconfig/extensions
+      - ./lab/common/yang/srl-23.3.2/openconfig/openconfig-extensions.yang
+    excludes:
+      - .*tools.*
+  - name: srl
+    vendor: Nokia
+    version: 22.11.2
+    files:
+      - ./lab/common/yang/srl-22.11.2/srl_nokia/models
+    directories:
+      - ./lab/common/yang/srl-22.11.2/ietf
+    excludes:
+      - .*tools.*
+  - name: srl
+    vendor: Nokia
     version: 22.11.1
     files:
       - ./lab/common/yang/srl-22.11.1/srl_nokia/models

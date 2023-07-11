@@ -14,54 +14,54 @@ import (
 	"path"
 
 	"github.com/iptecharch/schema-server/config"
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/schema"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func (s *Server) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (*schemapb.GetSchemaResponse, error) {
+func (s *Server) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
 	log.Debugf("received GetSchemaRequest: %v", req)
 	return s.schemaStore.GetSchema(ctx, req)
 }
 
-func (s *Server) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest) (*schemapb.ListSchemaResponse, error) {
+func (s *Server) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
 	log.Debugf("received ListSchema: %v", req)
 	return s.schemaStore.ListSchema(ctx, req)
 }
 
-func (s *Server) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDetailsRequest) (*schemapb.GetSchemaDetailsResponse, error) {
+func (s *Server) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
 	log.Debugf("received GetSchemaDetails: %v", req)
 	return s.schemaStore.GetSchemaDetails(ctx, req)
 }
 
-func (s *Server) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaRequest) (*schemapb.CreateSchemaResponse, error) {
+func (s *Server) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest) (*sdcpb.CreateSchemaResponse, error) {
 	log.Debugf("received CreateSchema: %v", req)
 	return s.schemaStore.CreateSchema(ctx, req)
 }
 
-func (s *Server) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaRequest) (*schemapb.ReloadSchemaResponse, error) {
+func (s *Server) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
 	log.Debugf("received ReloadSchema: %v", req)
 	return s.schemaStore.ReloadSchema(ctx, req)
 }
 
-func (s *Server) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaRequest) (*schemapb.DeleteSchemaResponse, error) {
+func (s *Server) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
 	log.Debugf("received DeleteSchema: %v", req)
 	return s.schemaStore.DeleteSchema(ctx, req)
 }
 
-func (s *Server) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*schemapb.ToPathResponse, error) {
+func (s *Server) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.ToPathResponse, error) {
 	log.Debugf("received ToPath: %v", req)
 	return s.schemaStore.ToPath(ctx, req)
 }
 
-func (s *Server) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest) (*schemapb.ExpandPathResponse, error) {
+func (s *Server) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
 	log.Debugf("received ExpandPath: %v", req)
 	return s.schemaStore.ExpandPath(ctx, req)
 }
 
-func (s *Server) UploadSchema(stream schemapb.SchemaServer_UploadSchemaServer) error {
+func (s *Server) UploadSchema(stream sdcpb.SchemaServer_UploadSchemaServer) error {
 	createReq, err := stream.Recv()
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func (s *Server) UploadSchema(stream schemapb.SchemaServer_UploadSchemaServer) e
 	var dirs []string
 
 	switch req := createReq.Upload.(type) {
-	case *schemapb.UploadSchemaRequest_CreateSchema:
+	case *sdcpb.UploadSchemaRequest_CreateSchema:
 		switch {
 		case req.CreateSchema.GetSchema().GetName() == "":
 			return status.Error(codes.InvalidArgument, "missing schema name")
@@ -104,7 +104,7 @@ LOOP:
 			return err
 		}
 		switch updloadFileReq := updloadFileReq.Upload.(type) {
-		case *schemapb.UploadSchemaRequest_SchemaFile:
+		case *sdcpb.UploadSchemaRequest_SchemaFile:
 			if updloadFileReq.SchemaFile.GetFileName() == "" {
 				return status.Error(codes.InvalidArgument, "missing file name")
 			}
@@ -130,16 +130,16 @@ LOOP:
 			if updloadFileReq.SchemaFile.GetHash() != nil {
 				var hash hash.Hash
 				switch updloadFileReq.SchemaFile.GetHash().GetMethod() {
-				case schemapb.Hash_UNSPECIFIED:
+				case sdcpb.Hash_UNSPECIFIED:
 					uplFile.Truncate(0)
 					uplFile.Close()
 					os.Remove(fileName)
 					return status.Errorf(codes.InvalidArgument, "hash method unspecified")
-				case schemapb.Hash_MD5:
+				case sdcpb.Hash_MD5:
 					hash = md5.New()
-				case schemapb.Hash_SHA256:
+				case sdcpb.Hash_SHA256:
 					hash = sha256.New()
-				case schemapb.Hash_SHA512:
+				case sdcpb.Hash_SHA512:
 					hash = sha512.New()
 				}
 				rb := make([]byte, 1024*1024)
@@ -178,14 +178,14 @@ LOOP:
 				}
 				uplFile.Close()
 				switch updloadFileReq.SchemaFile.GetFileType() {
-				case schemapb.UploadSchemaFile_MODULE:
+				case sdcpb.UploadSchemaFile_MODULE:
 					files = append(files, fileName)
-				case schemapb.UploadSchemaFile_DEPENDENCY:
+				case sdcpb.UploadSchemaFile_DEPENDENCY:
 					dirs = append(dirs, fileName)
 				}
 				delete(handledFiles, fileName)
 			}
-		case *schemapb.UploadSchemaRequest_Finalize:
+		case *sdcpb.UploadSchemaRequest_Finalize:
 			if len(handledFiles) != 0 {
 				err2 := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
 				if err2 != nil {
@@ -223,7 +223,7 @@ LOOP:
 	return nil
 }
 
-func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schemapb.SchemaServer_GetSchemaElementsServer) error {
+func (s *Server) GetSchemaElements(req *sdcpb.GetSchemaRequest, stream sdcpb.SchemaServer_GetSchemaElementsServer) error {
 	ctx := stream.Context()
 	ch, err := s.schemaStore.GetSchemaElements(ctx, req)
 	if err != nil {
@@ -237,7 +237,7 @@ func (s *Server) GetSchemaElements(req *schemapb.GetSchemaRequest, stream schema
 			if !ok {
 				return nil
 			}
-			err = stream.Send(&schemapb.GetSchemaResponse{
+			err = stream.Send(&sdcpb.GetSchemaResponse{
 				Schema: sce,
 			})
 			if err != nil {

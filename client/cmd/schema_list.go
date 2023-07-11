@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 )
 
 // schemaListCmd represents the list command
@@ -27,7 +27,7 @@ var schemaListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		req := &schemapb.ListSchemaRequest{}
+		req := &sdcpb.ListSchemaRequest{}
 		fmt.Println("request:")
 		fmt.Println(prototext.Format(req))
 		schemaList, err := schemaClient.ListSchema(ctx, req)
