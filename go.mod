@@ -1,6 +1,6 @@
 module github.com/iptecharch/schema-server
 
-go 1.19
+go 1.20
 
 require (
 	github.com/gorilla/mux v1.8.0
@@ -20,8 +20,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/controller-runtime v0.15.0
 )
-
-//replace github.com/iptecharch/yang-parser v0.0.0-20230510140343-01977cb31a31 => /home/mava/projects/yang-parser
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -71,7 +69,7 @@ require (
 )
 
 require (
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/cobra v1.7.0

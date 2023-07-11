@@ -7,7 +7,7 @@ IMAGE := $(REMOTE_REGISTRY):$(TAG)
 TEST_IMAGE := $(IMAGE)-test
 
 # go versions
-TARGET_GO_VERSION := go1.19.5
+TARGET_GO_VERSION := go1.20.5
 GO_FALLBACK := go
 # We prefere $TARGET_GO_VERSION if it is not available we go with whatever go we find ($GO_FALLBACK)
 GO_BIN := $(shell if [ "$$(which $(TARGET_GO_VERSION))" != "" ]; then echo $$(which $(TARGET_GO_VERSION)); else echo $$(which $(GO_FALLBACK)); fi)
