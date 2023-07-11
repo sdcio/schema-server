@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 )
 
 type SchemaConfig struct {
@@ -22,8 +22,8 @@ func (sc *SchemaConfig) validateSetDefaults() error {
 	return nil
 }
 
-func (sc *SchemaConfig) GetSchema() *schemapb.Schema {
-	return &schemapb.Schema{
+func (sc *SchemaConfig) GetSchema() *sdcpb.Schema {
+	return &sdcpb.Schema{
 		Name:    sc.Name,
 		Vendor:  sc.Vendor,
 		Version: sc.Version,

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 )
@@ -35,17 +35,17 @@ var schemaExpandPathCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		dt := schemapb.DataType_ALL
+		dt := sdcpb.DataType_ALL
 		if configOnly {
-			dt = schemapb.DataType_CONFIG
+			dt = sdcpb.DataType_CONFIG
 		}
 		if stateOnly {
-			dt = schemapb.DataType_STATE
+			dt = sdcpb.DataType_STATE
 		}
-		req := &schemapb.ExpandPathRequest{
+		req := &sdcpb.ExpandPathRequest{
 			Path:  p,
 			Xpath: asXpath,
-			Schema: &schemapb.Schema{
+			Schema: &sdcpb.Schema{
 				Name:    schemaName,
 				Vendor:  schemaVendor,
 				Version: schemaVersion,

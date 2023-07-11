@@ -6,28 +6,28 @@ import (
 	"sort"
 	"strings"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 )
 
-func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) *schemapb.SchemaElem {
+func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.SchemaElem {
 	switch {
 	case e.IsLeaf():
-		return &schemapb.SchemaElem{
-			Schema: &schemapb.SchemaElem_Field{
+		return &sdcpb.SchemaElem{
+			Schema: &sdcpb.SchemaElem_Field{
 				Field: leafFromYEntry(e, withDesc),
 			},
 		}
 	case e.IsLeafList():
-		return &schemapb.SchemaElem{
-			Schema: &schemapb.SchemaElem_Leaflist{
+		return &sdcpb.SchemaElem{
+			Schema: &sdcpb.SchemaElem_Leaflist{
 				Leaflist: leafListFromYEntry(e, withDesc),
 			},
 		}
 	default:
-		return &schemapb.SchemaElem{
-			Schema: &schemapb.SchemaElem_Container{
+		return &sdcpb.SchemaElem{
+			Schema: &sdcpb.SchemaElem_Container{
 				Container: containerFromYEntry(e, withDesc),
 			},
 		}
@@ -102,14 +102,14 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 	}
 }
 
-func (sc *Schema) BuildPath(pe []string, p *schemapb.Path) error {
+func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	if len(pe) == 0 {
 		return nil
 	}
 	sc.m.RLock()
 	defer sc.m.RUnlock()
 	if p.GetElem() == nil {
-		p.Elem = make([]*schemapb.PathElem, 0, 1)
+		p.Elem = make([]*sdcpb.PathElem, 0, 1)
 	}
 	for _, e := range sc.root.Dir {
 		if ee, ok := e.Dir[pe[0]]; ok {
@@ -120,7 +120,7 @@ func (sc *Schema) BuildPath(pe []string, p *schemapb.Path) error {
 	return nil
 }
 
-func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error {
+func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 	log.Tracef("buildPath START")
 	log.Tracef("buildPath: remainingPathElems=%v, path=%v", pe, p)
 	log.Tracef("received PE=%v", pe)
@@ -130,7 +130,7 @@ func (sc *Schema) buildPath(pe []string, p *schemapb.Path, e *yang.Entry) error 
 	log.Tracef("buildPath END")
 
 	lpe := len(pe)
-	cpe := &schemapb.PathElem{
+	cpe := &sdcpb.PathElem{
 		Name: e.Name,
 	}
 	if lpe == 0 {

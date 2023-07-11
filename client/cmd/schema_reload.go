@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 )
@@ -24,8 +24,8 @@ var schemaReloadCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		req := &schemapb.ReloadSchemaRequest{
-			Schema: &schemapb.Schema{
+		req := &sdcpb.ReloadSchemaRequest{
+			Schema: &sdcpb.Schema{
 				Name:    schemaName,
 				Vendor:  schemaVendor,
 				Version: schemaVersion,

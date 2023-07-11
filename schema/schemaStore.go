@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/iptecharch/schema-server/config"
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -30,7 +30,7 @@ func NewStore() *Store {
 	}
 }
 
-func (s *Store) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (*schemapb.GetSchemaResponse, error) {
+func (s *Store) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -47,7 +47,7 @@ func (s *Store) GetSchema(ctx context.Context, req *schemapb.GetSchemaRequest) (
 	if err != nil {
 		return nil, err
 	}
-	resp := &schemapb.GetSchemaResponse{
+	resp := &sdcpb.GetSchemaResponse{
 		Schema: SchemaElemFromYEntry(e, req.GetWithDescription()),
 	}
 	log.Tracef("schema response: %v", resp)
@@ -61,15 +61,15 @@ func (s *Store) HasSchema(scKey SchemaKey) bool {
 	return ok
 }
 
-func (s *Store) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest) (*schemapb.ListSchemaResponse, error) {
+func (s *Store) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
-	rsp := &schemapb.ListSchemaResponse{
-		Schema: make([]*schemapb.Schema, 0, len(s.schemas)),
+	rsp := &sdcpb.ListSchemaResponse{
+		Schema: make([]*sdcpb.Schema, 0, len(s.schemas)),
 	}
 	for _, sc := range s.schemas {
 		rsp.Schema = append(rsp.Schema,
-			&schemapb.Schema{
+			&sdcpb.Schema{
 				Name:    sc.Name(),
 				Vendor:  sc.Vendor(),
 				Version: sc.Version(),
@@ -78,7 +78,7 @@ func (s *Store) ListSchema(ctx context.Context, req *schemapb.ListSchemaRequest)
 	return rsp, nil
 }
 
-func (s *Store) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDetailsRequest) (*schemapb.GetSchemaDetailsResponse, error) {
+func (s *Store) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -89,8 +89,8 @@ func (s *Store) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDet
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	rsp := &schemapb.GetSchemaDetailsResponse{
-		Schema: &schemapb.Schema{
+	rsp := &sdcpb.GetSchemaDetailsResponse{
+		Schema: &sdcpb.Schema{
 			Name:    sc.Name(),
 			Vendor:  sc.Vendor(),
 			Version: sc.Version(),
@@ -103,7 +103,7 @@ func (s *Store) GetSchemaDetails(ctx context.Context, req *schemapb.GetSchemaDet
 	return rsp, nil
 }
 
-func (s *Store) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaRequest) (*schemapb.CreateSchemaResponse, error) {
+func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest) (*sdcpb.CreateSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -141,12 +141,12 @@ func (s *Store) CreateSchema(ctx context.Context, req *schemapb.CreateSchemaRequ
 	s.schemas[sc.Key()] = sc
 	scrsp := req.GetSchema()
 
-	return &schemapb.CreateSchemaResponse{
+	return &sdcpb.CreateSchemaResponse{
 		Schema: scrsp,
 	}, nil
 }
 
-func (s *Store) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaRequest) (*schemapb.ReloadSchemaResponse, error) {
+func (s *Store) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -164,10 +164,10 @@ func (s *Store) ReloadSchema(ctx context.Context, req *schemapb.ReloadSchemaRequ
 	s.ms.Lock()
 	defer s.ms.Unlock()
 	s.schemas[nsc.Key()] = nsc
-	return &schemapb.ReloadSchemaResponse{}, nil
+	return &sdcpb.ReloadSchemaResponse{}, nil
 }
 
-func (s *Store) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaRequest) (*schemapb.DeleteSchemaResponse, error) {
+func (s *Store) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -190,10 +190,10 @@ func (s *Store) DeleteSchema(ctx context.Context, req *schemapb.DeleteSchemaRequ
 	s.ms.Lock()
 	defer s.ms.Unlock()
 	delete(s.schemas, schemaKey)
-	return &schemapb.DeleteSchemaResponse{}, nil
+	return &sdcpb.DeleteSchemaResponse{}, nil
 }
 
-func (s *Store) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*schemapb.ToPathResponse, error) {
+func (s *Store) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.ToPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -212,20 +212,20 @@ func (s *Store) ToPath(ctx context.Context, req *schemapb.ToPathRequest) (*schem
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v does not exist", reqSchema)
 	}
-	p := &schemapb.Path{
-		Elem: make([]*schemapb.PathElem, 0),
+	p := &sdcpb.Path{
+		Elem: make([]*sdcpb.PathElem, 0),
 	}
 	err := sc.BuildPath(req.GetPathElement(), p)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
-	rsp := &schemapb.ToPathResponse{
+	rsp := &sdcpb.ToPathResponse{
 		Path: p,
 	}
 	return rsp, nil
 }
 
-func (s *Store) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest) (*schemapb.ExpandPathResponse, error) {
+func (s *Store) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -254,12 +254,12 @@ func (s *Store) ExpandPath(ctx context.Context, req *schemapb.ExpandPathRequest)
 			xpaths = append(xpaths, utils.ToXPath(p, false))
 		}
 		sort.Strings(xpaths)
-		rsp := &schemapb.ExpandPathResponse{
+		rsp := &sdcpb.ExpandPathResponse{
 			Xpath: xpaths,
 		}
 		return rsp, nil
 	}
-	rsp := &schemapb.ExpandPathResponse{
+	rsp := &sdcpb.ExpandPathResponse{
 		Path: paths,
 	}
 	return rsp, nil
@@ -271,7 +271,7 @@ func (s *Store) AddSchema(sc *Schema) {
 	s.schemas[sc.Key()] = sc
 }
 
-func (s *Store) GetSchemaElements(ctx context.Context, req *schemapb.GetSchemaRequest) (chan *schemapb.SchemaElem, error) {
+func (s *Store) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRequest) (chan *sdcpb.SchemaElem, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -284,7 +284,7 @@ func (s *Store) GetSchemaElements(ctx context.Context, req *schemapb.GetSchemaRe
 	}
 	pes := utils.ToStrings(req.GetPath(), false, true)
 
-	sch := make(chan *schemapb.SchemaElem)
+	sch := make(chan *sdcpb.SchemaElem)
 	ych := make(chan *yang.Entry)
 	wg := new(sync.WaitGroup)
 	wg.Add(2)

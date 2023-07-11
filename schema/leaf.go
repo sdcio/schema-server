@@ -3,13 +3,13 @@ package schema
 import (
 	"strings"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 )
 
-func leafFromYEntry(e *yang.Entry, withDesc bool) *schemapb.LeafSchema {
-	l := &schemapb.LeafSchema{
+func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
+	l := &sdcpb.LeafSchema{
 		Name: e.Name,
 		// Description:    e.Description,
 		Owner:          "",
@@ -45,12 +45,12 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *schemapb.LeafSchema {
 	return l
 }
 
-func toSchemaType(yt *yang.YangType) *schemapb.SchemaLeafType {
+func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 	var values []string
 	if yt.Enum != nil {
 		values = yt.Enum.Names()
 	}
-	slt := &schemapb.SchemaLeafType{
+	slt := &sdcpb.SchemaLeafType{
 		Type:       yang.TypeKind(yt.Kind).String(),
 		Range:      yt.Range.String(),
 		Length:     yt.Length.String(),
@@ -58,11 +58,11 @@ func toSchemaType(yt *yang.YangType) *schemapb.SchemaLeafType {
 		Units:      yt.Units,
 		TypeName:   yt.Name,
 		Leafref:    yt.Path,
-		Patterns:   []*schemapb.SchemaPattern{},
-		UnionTypes: []*schemapb.SchemaLeafType{},
+		Patterns:   []*sdcpb.SchemaPattern{},
+		UnionTypes: []*sdcpb.SchemaLeafType{},
 	}
 	for _, pat := range yt.Pattern {
-		slt.Patterns = append(slt.Patterns, &schemapb.SchemaPattern{
+		slt.Patterns = append(slt.Patterns, &sdcpb.SchemaPattern{
 			Pattern:  pat,
 			Inverted: false,
 		})
@@ -80,15 +80,15 @@ func toSchemaType(yt *yang.YangType) *schemapb.SchemaLeafType {
 	return slt
 }
 
-func getMustStatement(e *yang.Entry) []*schemapb.MustStatement {
+func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 	mustStatements, ok := e.Extra["must"]
 	if !ok {
 		return nil
 	}
-	rs := make([]*schemapb.MustStatement, 0, len(mustStatements))
+	rs := make([]*sdcpb.MustStatement, 0, len(mustStatements))
 	for _, m := range mustStatements {
 		if m, ok := m.(*yang.Must); ok {
-			ms := &schemapb.MustStatement{
+			ms := &sdcpb.MustStatement{
 				Statement: m.Name,
 			}
 			if m.ErrorMessage != nil {

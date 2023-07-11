@@ -3,8 +3,8 @@ package schema
 import (
 	"strings"
 
-	schemapb "github.com/iptecharch/schema-server/protos/schema_server"
 	"github.com/iptecharch/schema-server/utils"
+	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 )
@@ -75,7 +75,7 @@ func normalizePath(p string, e *yang.Entry) []string {
 	return pe
 }
 
-func relativeToAbsPathKeys(p *schemapb.Path, e *yang.Entry) {
+func relativeToAbsPathKeys(p *sdcpb.Path, e *yang.Entry) {
 	// go through the Path elements
 	for _, pe := range p.GetElem() {
 
@@ -131,9 +131,9 @@ func relativeToAbsPathKeys(p *schemapb.Path, e *yang.Entry) {
 	}
 }
 
-func relativeToAbsPath(p *schemapb.Path, e *yang.Entry) *schemapb.Path {
-	np := &schemapb.Path{
-		Elem: make([]*schemapb.PathElem, 0, len(p.GetElem())),
+func relativeToAbsPath(p *sdcpb.Path, e *yang.Entry) *sdcpb.Path {
+	np := &sdcpb.Path{
+		Elem: make([]*sdcpb.PathElem, 0, len(p.GetElem())),
 	}
 	ce := e
 	for _, pe := range p.GetElem() {
@@ -155,13 +155,13 @@ func relativeToAbsPath(p *schemapb.Path, e *yang.Entry) *schemapb.Path {
 		return np
 	}
 	for ce != nil && ce.Parent != nil && ce.Parent.Name != "root" {
-		np.Elem = append([]*schemapb.PathElem{{Name: ce.Name}}, np.GetElem()...)
+		np.Elem = append([]*sdcpb.PathElem{{Name: ce.Name}}, np.GetElem()...)
 		ce = ce.Parent
 	}
 	return np
 }
 
-func hasRelativePathElem(p *schemapb.Path) bool {
+func hasRelativePathElem(p *sdcpb.Path) bool {
 	for _, pe := range p.GetElem() {
 		if pe.GetName() == ".." {
 			return true
@@ -170,7 +170,7 @@ func hasRelativePathElem(p *schemapb.Path) bool {
 	return false
 }
 
-func hasRelativeKeys(p *schemapb.Path) bool {
+func hasRelativeKeys(p *sdcpb.Path) bool {
 	for _, pe := range p.GetElem() {
 		for _, v := range pe.GetKey() {
 			if strings.Contains(v, "..") || strings.Contains(v, "current()") {
@@ -181,12 +181,12 @@ func hasRelativeKeys(p *schemapb.Path) bool {
 	return false
 }
 
-func buildPathUpFromEntry(e *yang.Entry) *schemapb.Path {
+func buildPathUpFromEntry(e *yang.Entry) *sdcpb.Path {
 	if e == nil {
 		return nil
 	}
-	p := &schemapb.Path{Elem: make([]*schemapb.PathElem, 0, 16)}
-	p.Elem = append(p.Elem, &schemapb.PathElem{Name: e.Name})
+	p := &sdcpb.Path{Elem: make([]*sdcpb.PathElem, 0, 16)}
+	p.Elem = append(p.Elem, &sdcpb.PathElem{Name: e.Name})
 	pce := e
 	for pce != nil {
 		pce = getParent(pce)
@@ -196,7 +196,7 @@ func buildPathUpFromEntry(e *yang.Entry) *schemapb.Path {
 		if pce.IsCase() || pce.IsChoice() {
 			continue
 		}
-		p.Elem = append(p.Elem, &schemapb.PathElem{Name: pce.Name})
+		p.Elem = append(p.Elem, &sdcpb.PathElem{Name: pce.Name})
 	}
 	// reverse slice
 	for i, j := 0, len(p.GetElem())-1; i < j; i, j = i+1, j-1 {
