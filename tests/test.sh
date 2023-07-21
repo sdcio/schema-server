@@ -1,35 +1,29 @@
 #!/bin/bash
 
 SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
-CLIENT=$SCRIPTPATH/../bin/client
+CLIENT=$SCRIPTPATH/../bin/schemac
+HOST=localhost:55000
+version=23.3.2
 
-$CLIENT -a clab-distributed-data-server:56000 datastore get --ds srl1
-$CLIENT -a clab-distributed-data-server:56000 datastore create --ds srl1 --candidate default
-$CLIENT -a clab-distributed-data-server:56000 datastore get --ds srl1
+$CLIENT -a $HOST schema list
 
-$CLIENT -a clab-distributed-data-server:56000 datastore get --ds srl2
-$CLIENT -a clab-distributed-data-server:56000 datastore create --ds srl2 --candidate default
-$CLIENT -a clab-distributed-data-server:56000 datastore get --ds srl2
+$CLIENT -a $HOST schema get --name srl --version $version --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface
+$CLIENT -a $HOST schema get --name srl --version $version --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface --all
+$CLIENT -a $HOST schema get --name srl --version $version --vendor Nokia --path /acl/cpm-filter/ipv4-filter/entry/action/accept/rate-limit/system-cpu-policer
+$CLIENT -a $HOST schema to-path --name srl --version $version --vendor Nokia --cp interface,mgmt0,admin-state
+$CLIENT -a $HOST schema to-path --name srl --version $version --vendor Nokia --cp acl,cpm-filter,ipv4-filter,entry,1,action,accept,rate-limit,system-cpu-policer
+$CLIENT -a $HOST schema expand --name srl --version $version --vendor Nokia --path interface[name=ethernet-1/1]
+
+$CLIENT -a $HOST schema bench --name srl --vendor Nokia --version $version
 
 echo "start"
 date -Ins
 for i in $(seq 1 1000);
 do 
-# date -Ins
-$CLIENT -a clab-distributed-data-server:56000 data set --ds srl1 --candidate default  --update interface[name=ethernet-1/1]/admin-state:::enable \
-                                                        --update interface[name=ethernet-1/1]/vlan-tagging:::true \
-                                                        --update interface[name=ethernet-1/1]/description:::interface_desc$i \
-                                                        --update interface[name=ethernet-1/1]/subinterface[index=$i]/admin-state:::enable \
-                                                        --update interface[name=ethernet-1/1]/subinterface[index=$i]/type:::bridged \
-                                                        --update interface[name=ethernet-1/1]/subinterface[index=$i]/description:::subinterface_desc$i \
-                                                        --update interface[name=ethernet-1/1]/subinterface[index=$i]/vlan/encap/single-tagged/vlan-id:::$((i+1)) > /dev/null
-#
-# date -Ins
+    #date -Ins
+    $CLIENT -a $HOST schema get --name srl --version $version --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface > /dev/null
+    # $CLIENT -a $HOST schema to-path --name srl --version $version --vendor Nokia --cp acl,cpm-filter,ipv4-filter,entry,1,action,accept,rate-limit,system-cpu-policer > /dev/null
+    # $CLIENT -a $HOST schema expand --name srl --version $version --vendor Nokia --path interface[name=ethernet-1/1] > /dev/null
+    #date -Ins
 done
-echo "sets"
-date -Ins
-# $CLIENT data diff --ds srl1 --candidate default > /dev/null
-# date
-$CLIENT -a clab-distributed-data-server:56000 datastore commit --ds srl1 --candidate default
-echo "commit"
 date -Ins
