@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
@@ -30,6 +31,8 @@ var schemaListCmd = &cobra.Command{
 		req := &sdcpb.ListSchemaRequest{}
 		fmt.Println("request:")
 		fmt.Println(prototext.Format(req))
+		ctx, cancel2 := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel2()
 		schemaList, err := schemaClient.ListSchema(ctx, req)
 		if err != nil {
 			return err
@@ -41,6 +44,15 @@ var schemaListCmd = &cobra.Command{
 			for _, schema := range schemaList.GetSchema() {
 				tableData = append(tableData, []string{schema.GetName(), schema.GetVendor(), schema.GetVersion()})
 			}
+			sort.Slice(tableData, func(i, j int) bool {
+				if tableData[i][0] == tableData[j][0] {
+					if tableData[i][1] == tableData[j][1] {
+						return tableData[i][2] < tableData[j][2]
+					}
+					return tableData[i][1] < tableData[j][1]
+				}
+				return tableData[i][0] < tableData[j][0]
+			})
 			table := tablewriter.NewWriter(os.Stdout)
 			table.SetHeader([]string{"Name", "Vendor", "Version"})
 			table.SetAlignment(tablewriter.ALIGN_LEFT)

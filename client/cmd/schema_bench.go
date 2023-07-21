@@ -46,6 +46,8 @@ var schemaBenchCmd = &cobra.Command{
 		start := time.Now()
 		count := 0
 		//
+		ctx, cancel2 := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel2()
 		rsp, err := schemaClient.GetSchema(ctx, req)
 		if err != nil {
 			return err

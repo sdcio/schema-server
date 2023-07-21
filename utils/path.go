@@ -245,14 +245,6 @@ func CompletePath(prefix, path *sdcpb.Path) ([]string, error) {
 	return append(fullPrefix, ToStrings(path, false, false)...), nil
 }
 
-func CompletePathFromString(s string) ([]string, error) {
-	p, err := ParsePath(s)
-	if err != nil {
-		return nil, err
-	}
-	return CompletePath(nil, p)
-}
-
 func ToXPath(p *sdcpb.Path, noKeys bool) string {
 	if p == nil {
 		return ""
@@ -280,28 +272,4 @@ func ToXPath(p *sdcpb.Path, noKeys bool) string {
 		}
 	}
 	return sb.String()
-}
-
-func StripPathElemPrefix(p string) (string, error) {
-	sp, err := ParsePath(p)
-	if err != nil {
-		return "", err
-	}
-	for _, pe := range sp.GetElem() {
-		if i := strings.Index(pe.Name, ":"); i > 0 {
-			pe.Name = pe.Name[i+1:]
-		}
-		// delete prefix from keys
-		for k, v := range pe.Key {
-			if i := strings.Index(k, ":"); i > 0 {
-				delete(pe.Key, k)
-				pe.Key[k[i+1:]] = v
-			}
-		}
-	}
-	prefix := ""
-	if strings.HasPrefix(strings.TrimSpace(p), "/") {
-		prefix = "/"
-	}
-	return prefix + ToXPath(sp, false), nil
 }

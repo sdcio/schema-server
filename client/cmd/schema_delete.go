@@ -33,6 +33,8 @@ var deleteCmd = &cobra.Command{
 		}
 		fmt.Println("request:")
 		fmt.Println(prototext.Format(req))
+		ctx, cancel2 := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel2()
 		rsp, err := schemaClient.DeleteSchema(ctx, req)
 		if err != nil {
 			return err

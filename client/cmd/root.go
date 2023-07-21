@@ -31,6 +31,7 @@ func Execute() {
 var addr string
 var format string
 var maxRcvMsg int
+var timeout time.Duration
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&addr, "address", "a", "localhost:55000", "schema server address")
@@ -39,10 +40,11 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&schemaVersion, "version", "", "schema version")
 	rootCmd.PersistentFlags().StringVar(&format, "format", "", "output format")
 	rootCmd.PersistentFlags().IntVar(&maxRcvMsg, "max-rcv-msg", 25165824, "the maximum message size in bytes the client can receive")
+	rootCmd.PersistentFlags().DurationVarP(&timeout, "timeout", "", 10*time.Second, "gRPC dial timeout")
 }
 
 func createSchemaClient(ctx context.Context, addr string) (sdcpb.SchemaServerClient, error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cc, err := grpc.DialContext(ctx, addr,
 		grpc.WithBlock(),

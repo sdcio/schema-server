@@ -45,6 +45,8 @@ var schemaGetCmd = &cobra.Command{
 		}
 		fmt.Println("request:")
 		fmt.Println(prototext.Format(req))
+		ctx, cancel2 := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel2()
 		if all {
 			return handleGetSchemaElems(ctx, schemaClient, req)
 		}
