@@ -9,10 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/server"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
+
+	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/server"
 )
 
 var version = "dev"

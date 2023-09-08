@@ -19,12 +19,20 @@ make build
 ```shell
 # schema
 version=23.3.2
-bin/schemac schema get --name srl --version $version --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface
-bin/schemac schema get --name srl --version $version --vendor Nokia --path /interface[name=ethernet-1/1]/subinterface --all
-bin/schemac schema get --name srl --version $version --vendor Nokia --path /acl/cpm-filter/ipv4-filter/entry/action/accept/rate-limit/system-cpu-policer
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface[name=ethernet-1/1]/subinterface"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface[name=ethernet-1/1]/subinterface" --all
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/acl/cpm-filter/ipv4-filter/entry/action/accept/rate-limit/system-cpu-policer"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler/scheduler-policy"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler/tier"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler/tier/node"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler/tier/node[node-number=*]"
+bin/schemac schema get --name srl --version $version --vendor Nokia --path "/interface/qos/output/scheduler/tier/node/node-number"
+
 bin/schemac schema to-path --name srl --version $version --vendor Nokia --cp interface,mgmt0,admin-state
 bin/schemac schema to-path --name srl --version $version --vendor Nokia --cp acl,cpm-filter,ipv4-filter,entry,1,action,accept,rate-limit,system-cpu-policer
-bin/schemac schema expand --name srl --version $version --vendor Nokia --path interface[name=ethernet-1/1]
+bin/schemac schema expand --name srl --version $version --vendor Nokia --path "interface[name=ethernet-1/1]"
+bin/schemac schema expand --name srl --version $version --vendor Nokia --path "/interface/qos"
 #
 bin/schemac schema bench --name srl --version $version --vendor Nokia --path /
 ```

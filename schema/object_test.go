@@ -5,9 +5,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/iptecharch/schema-server/config"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+
+	"github.com/iptecharch/schema-server/config"
 )
 
 func TestSchema_BuildPath(t *testing.T) {
@@ -302,52 +303,139 @@ func TestSchema_BuildPath(t *testing.T) {
 					}},
 					wantErr: false,
 				},
-				// {
-				// 	name: "path with choice/case 2",
-				// 	args: args{
-				// 		pe: []string{
-				// 			"foo",
-				// 			"foo1",
-				// 			"case2-container",
-				// 			"cas2_leaf",
-				// 		},
-				// 		p: &sdcpb.Path{},
-				// 	},
-				// 	want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
-				// 		{
-				// 			Name: "foo",
-				// 		},
-				// 		{
-				// 			Name: "foo1",
-				// 		},
-				// 		{
-				// 			Name: "case2-container",
-				// 		},
-				// 		{
-				// 			Name: "cas2_leaf",
-				// 		},
-				// 	}},
-				// 	wantErr: false,
-				// },
-				// {
-				// 	name: "path with choice/case 3",
-				// 	args: args{
-				// 		pe: []string{"foo", "foo1", "cas3-leaf"},
-				// 		p:  &sdcpb.Path{},
-				// 	},
-				// 	want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
-				// 		{
-				// 			Name: "foo",
-				// 		},
-				// 		{
-				// 			Name: "foo1",
-				// 		},
-				// 		{
-				// 			Name: "cas3-leaf",
-				// 		},
-				// 	}},
-				// 	wantErr: false,
-				// },
+				{
+					name: "path with choice/case 2",
+					args: args{
+						pe: []string{
+							"foo",
+							"foo1",
+							"case2-container",
+							"cas2_leaf",
+						},
+						p: &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "foo1",
+						},
+						{
+							Name: "case2-container",
+						},
+						{
+							Name: "cas2_leaf",
+						},
+					}},
+					wantErr: false,
+				},
+				{
+					name: "path with choice/case 3",
+					args: args{
+						pe: []string{"foo", "foo1", "cas3-leaf"},
+						p:  &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "foo1",
+						},
+						{
+							Name: "cas3-leaf",
+						},
+					}},
+					wantErr: false,
+				},
+				{
+					name: "path with choice/case explicit",
+					args: args{
+						pe: []string{"foo", "foo2", "c2-1"},
+						p:  &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "foo2",
+						},
+						{
+							Name: "c2-1",
+						},
+					}},
+					wantErr: false,
+				},
+				{
+					name: "path with choice/case explicit 2",
+					args: args{
+						pe: []string{"foo", "foo2", "c2-1", "leaf-c2-1"},
+						p:  &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "foo2",
+						},
+						{
+							Name: "c2-1",
+						},
+						{
+							Name: "leaf-c2-1",
+						},
+					}},
+					wantErr: false,
+				},
+				{
+					name: "path with choice under list, implicit case",
+					args: args{
+						pe: []string{"foo", "bar", "k1v", "k2v", "ch11"},
+						p:  &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "bar",
+							Key: map[string]string{
+								"k1": "k1v",
+								"k2": "k2v",
+							},
+						},
+						{
+							Name: "ch11",
+						},
+					}},
+					wantErr: false,
+				},
+				{
+					name: "path with choice under list, explicit case",
+					args: args{
+						pe: []string{"foo", "bar", "k1v", "k2v", "ch21"},
+						p:  &sdcpb.Path{},
+					},
+					want: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+						{
+							Name: "foo",
+						},
+						{
+							Name: "bar",
+							Key: map[string]string{
+								"k1": "k1v",
+								"k2": "k2v",
+							},
+						},
+						{
+							Name: "ch21",
+						},
+					}},
+					wantErr: false,
+				},
 			},
 		},
 	}
@@ -361,6 +449,7 @@ func TestSchema_BuildPath(t *testing.T) {
 			for _, ti := range tt.testItems {
 				if err := sc.BuildPath(ti.args.pe, ti.args.p); (err != nil) != ti.wantErr {
 					t.Errorf("Schema.BuildPath() error = %v, wantErr %v", err, ti.wantErr)
+					return
 				}
 				if !comparePaths(ti.args.p, ti.want) {
 					t.Logf("%s:", ti.name)
