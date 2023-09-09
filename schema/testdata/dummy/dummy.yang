@@ -19,15 +19,38 @@ module dummy {
                     type string;
                 }
             }
+            // choice under list with implicit cases
+            choice choix1 {
+                leaf ch11 {
+                    type string;
+                }
+                leaf ch12 {
+                    type string;
+                }
+            }
+            // choice under list with explicit cases
+            choice choix2 {
+                case cas1 {
+                    leaf ch21 {
+                        type string;
+                    }
+                }
+                case cas2 {
+                    leaf ch22 {
+                        type string;
+                    }
+                }
+            }
         }
         container foo1 {
+            // choice with implicit cases
             choice c1 {
                 container case1-container {
                     leaf cas1_leaf {
                         type string;
                     }
                 }
-                container case2-container {     
+                container case2-container {
                     leaf cas2_leaf {
                         type string;
                     }
@@ -38,23 +61,24 @@ module dummy {
             }
         }
         container foo2 {
+            // choice with explicit cases
             choice c2 {
                 case cas1 {
                     container c2-1 {
                         leaf leaf-c2-1 {
                             type string;
-                        }   
+                        }
                     }
                 }
                 case cas2 {
                     container c2-2 {
                         leaf leaf-c2-2 {
                             type string;
-                        }   
-                    } 
+                        }
+                    }
                 }
             }
-            container c2-1 {
+            container c3-1 {
                 leaf l1 {
                     type string;
                 }

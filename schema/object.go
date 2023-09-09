@@ -161,7 +161,12 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		if ee, ok := e.Dir[nxt]; ok {
 			return sc.buildPath(pe[count:], p, ee)
 		}
-		return fmt.Errorf("list %s - unknown element %s", e.Name, nxt)
+		// find choices/cases
+		ee, err := sc.findChoiceCase(e, pe[count-1:])
+		if err != nil {
+			return fmt.Errorf("list %s - %v", e.Name, err)
+		}
+		return sc.buildPath(pe[count:], p, ee)
 	case e.IsChoice():
 		p.Elem = append(p.Elem, cpe)
 		if ee, ok := e.Dir[pe[0]]; ok {
@@ -179,8 +184,9 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		}
 		return fmt.Errorf("case %s - unknown element %s", e.Name, pe[0])
 	case e.IsContainer():
-		if ee, ok := e.Dir[e.Name]; ee != nil && ok {
-			if ee.IsCase() || ee.IsChoice() {
+		// implicit case: child with same name which is a choice
+		if ee, ok := e.Dir[pe[0]]; ee != nil && ok {
+			if ee.IsChoice() {
 				return sc.buildPath(pe[1:], p, ee)
 			}
 		}
@@ -195,14 +201,12 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		if ee, ok := e.Dir[pe[1]]; ok {
 			return sc.buildPath(pe[1:], p, ee)
 		}
-		for _, ee := range e.Dir {
-			if ee.IsCase() || ee.IsChoice() {
-				if eee, ok := ee.Dir[pe[1]]; ok {
-					return sc.buildPath(pe[1:], p, eee)
-				}
-			}
+		// find choice/case
+		ee, err := sc.findChoiceCase(e, pe)
+		if err != nil {
+			return fmt.Errorf("container %s - %v", e.Name, err)
 		}
-		return fmt.Errorf("container %s - unknown element %v", e.Name, pe[1])
+		return sc.buildPath(pe[1:], p, ee)
 	case e.IsLeaf():
 		if lpe != 1 {
 			return fmt.Errorf("leaf %s - unknown element %v", e.Name, pe[0])
@@ -219,7 +223,7 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 
 func getChildren(e *yang.Entry) []*yang.Entry {
 	switch {
-	case e.IsChoice():
+	case e.IsChoice(), e.IsCase(), e.IsContainer(), e.IsList():
 		rs := make([]*yang.Entry, 0, len(e.Dir))
 		for _, ee := range e.Dir {
 			if ee.IsChoice() || ee.IsCase() {
@@ -230,46 +234,44 @@ func getChildren(e *yang.Entry) []*yang.Entry {
 		}
 		//sort.Slice(rs, sortFn(rs))
 		return rs
-	case e.IsCase():
-		rs := make([]*yang.Entry, 0, len(e.Dir))
-		if len(e.Dir) == 0 {
-			rs = append(rs, e)
-			return rs
-		}
+		// case e.IsCase():
+		// 	rs := make([]*yang.Entry, 0, len(e.Dir))
+		// 	// if len(e.Dir) == 0 {
+		// 	// 	rs = append(rs, e)
+		// 	// 	return rs
+		// 	// }
 
-		for _, ee := range e.Dir {
-			if ee.IsChoice() || ee.IsCase() {
-				rs = append(rs, getChildren(ee)...)
-				continue
-			}
-			rs = append(rs, ee)
-		}
-		//sort.Slice(rs, sortFn(rs))
-		return rs
-	case e.IsContainer():
-		rs := make([]*yang.Entry, 0, len(e.Dir))
-		for _, ee := range e.Dir {
-			if ee.IsChoice() || ee.IsCase() {
-				rs = append(rs, getChildren(ee)...)
-				continue
-			}
-			rs = append(rs, ee)
-		}
-		//sort.Slice(rs, sortFn(rs))
-		return rs
-	case e.IsList():
-		rs := make([]*yang.Entry, 0, len(e.Dir))
-		for _, ee := range e.Dir {
-			// fmt.Printf("!! Appending child %s to %s\n", ee.Name, e.Name)
-			if ee.IsChoice() || ee.IsCase() {
-				rs = append(rs, getChildren(ee)...)
-				continue
-			}
-			// fmt.Printf("Appending child %s to %s\n", ee.Name, e.Name)
-			rs = append(rs, ee)
-		}
-		//sort.Slice(rs, sortFn(rs))
-		return rs
+		// 	for _, ee := range e.Dir {
+		// 		if ee.IsChoice() || ee.IsCase() {
+		// 			rs = append(rs, getChildren(ee)...)
+		// 			continue
+		// 		}
+		// 		rs = append(rs, ee)
+		// 	}
+		// 	//sort.Slice(rs, sortFn(rs))
+		// 	return rs
+		// case e.IsContainer():
+		// 	rs := make([]*yang.Entry, 0, len(e.Dir))
+		// 	for _, ee := range e.Dir {
+		// 		if ee.IsChoice() || ee.IsCase() {
+		// 			rs = append(rs, getChildren(ee)...)
+		// 			continue
+		// 		}
+		// 		rs = append(rs, ee)
+		// 	}
+		// 	//sort.Slice(rs, sortFn(rs))
+		// 	return rs
+		// case e.IsList():
+		// 	rs := make([]*yang.Entry, 0, len(e.Dir))
+		// 	for _, ee := range e.Dir {
+		// 		if ee.IsChoice() || ee.IsCase() {
+		// 			rs = append(rs, getChildren(ee)...)
+		// 			continue
+		// 		}
+		// 		rs = append(rs, ee)
+		// 	}
+		// 	//sort.Slice(rs, sortFn(rs))
+		// 	return rs
 	default:
 		return nil
 	}
@@ -418,4 +420,30 @@ func getEntryCh(e *yang.Entry, pe []string, ch chan *yang.Entry) error {
 		// fmt.Println("entry name", e.Name, pe)
 		return fmt.Errorf("%q not found", pe[0])
 	}
+}
+
+// findChoiceCase finds an entry nested in a choice and potentially a case statement
+func (sc *Schema) findChoiceCase(e *yang.Entry, pe []string) (*yang.Entry, error) {
+	if len(pe) == 0 {
+		return e, nil
+	}
+	for _, ee := range e.Dir {
+		if !ee.IsChoice() {
+			continue
+		}
+		if eee, ok := ee.Dir[pe[1]]; ok && !eee.IsCase() {
+			return eee, nil
+		}
+		// assume there was a case obj,
+		// search one step deeper
+		for _, eee := range ee.Dir {
+			if !eee.IsCase() {
+				continue
+			}
+			if eeee, ok := eee.Dir[pe[1]]; ok {
+				return eeee, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("unknown element %s", pe[1])
 }
