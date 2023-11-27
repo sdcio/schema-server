@@ -610,7 +610,6 @@ func Test_getChildren(t *testing.T) {
 					Augments:   []*yang.Entry{},
 					Augmented:  []*yang.Entry{},
 					Deviations: []*yang.DeviatedEntry{},
-					//Deviate:     map[yang.deviationType][]*yang.Entry{},
 					Uses:       []*yang.UsesStmt{},
 					Extra:      map[string][]interface{}{},
 					Annotation: map[string]interface{}{},
@@ -703,11 +702,25 @@ func Test_getChildren(t *testing.T) {
 									Node: &yang.Container{},
 									Kind: yang.CaseEntry,
 									Name: "c1",
+									Dir: map[string]*yang.Entry{
+										"c1": {
+											Node: &yang.Container{},
+											Kind: yang.DirectoryEntry,
+											Name: "c1",
+										},
+									},
 								},
 								"case2": {
 									Node: &yang.Container{},
 									Kind: yang.CaseEntry,
 									Name: "c2",
+									Dir: map[string]*yang.Entry{
+										"c2": {
+											Node: &yang.Container{},
+											Kind: yang.DirectoryEntry,
+											Name: "c2",
+										},
+									},
 								},
 							}},
 					},
@@ -720,7 +733,6 @@ func Test_getChildren(t *testing.T) {
 					Augments:   []*yang.Entry{},
 					Augmented:  []*yang.Entry{},
 					Deviations: []*yang.DeviatedEntry{},
-					//Deviate:     map[yang.deviationType][]*yang.Entry{},
 					Uses:       []*yang.UsesStmt{},
 					Extra:      map[string][]interface{}{},
 					Annotation: map[string]interface{}{},
@@ -729,8 +741,8 @@ func Test_getChildren(t *testing.T) {
 			want: []*yang.Entry{
 				{Node: &yang.Leaf{}, Name: "l1"},
 				{Node: &yang.Leaf{}, Name: "l2"},
-				{Node: &yang.Container{}, Kind: yang.CaseEntry, Name: "c1"},
-				{Node: &yang.Container{}, Kind: yang.CaseEntry, Name: "c2"},
+				{Node: &yang.Container{}, Kind: yang.DirectoryEntry, Name: "c1"},
+				{Node: &yang.Container{}, Kind: yang.DirectoryEntry, Name: "c2"},
 				{Node: &yang.Container{}, Kind: yang.DirectoryEntry, Name: "c3"},
 			},
 		},
