@@ -18,7 +18,7 @@ grpc-server:
   # max message size in bytes the server can receive. 
   # If this is not set, it defaults to 4 * 1024 * 1024 (4MB)
   max-recv-msg-size: 25165824
-  
+
 schemas:
   - name: sros
     vendor: Nokia
@@ -28,6 +28,25 @@ schemas:
     directories:
       - ./lab/common/yang/sros_22.10/YANG/ietf
       - ./lab/common/yang/sros_22.10/YANG/nokia-sros-yang-extensions.yang
+  - name: sros
+    vendor: Nokia
+    version: 23.7
+    files:
+      - ./lab/common/yang/sros_23.7/YANG/nokia-combined
+    directories:
+      - ./lab/common/yang/sros_23.7/YANG/ietf
+      - ./lab/common/yang/sros_23.7/YANG/nokia-sros-yang-extensions.yang
+  - name: srl
+    vendor: Nokia
+    version: 23.7.1
+    files:
+      - ./lab/common/yang/srl-23.7.1/srl_nokia/models
+    directories:
+      - ./lab/common/yang/srl-23.7.1/ietf
+      - ./lab/common/yang/srl-23.7.1/openconfig/extensions
+      - ./lab/common/yang/srl-23.7.1/openconfig/openconfig-extensions.yang
+    excludes:
+      - .*tools.*
   - name: srl
     vendor: Nokia
     version: 23.3.2
