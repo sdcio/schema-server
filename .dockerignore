@@ -5,3 +5,4 @@ proto/*proto
 *.txt
 schema-server
 dist
+tests
