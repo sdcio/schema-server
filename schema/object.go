@@ -111,6 +111,29 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	if p.GetElem() == nil {
 		p.Elem = make([]*sdcpb.PathElem, 0, 1)
 	}
+	first := pe[0]
+	index := strings.Index(pe[0], ":")
+	if index > 0 {
+		first = pe[0][:index]
+		pe[0] = pe[0][index+1:]
+	}
+	// try module
+	if e, ok := sc.root.Dir[first]; ok {
+		if e == nil {
+			return fmt.Errorf("module %q not found", first)
+		}
+		if ee, ok := e.Dir[pe[0]]; ok {
+			err := sc.buildPath(pe, p, ee)
+			if err != nil {
+				return err
+			}
+			// add ns/prefix to the first elem
+			p.GetElem()[0].Name = first + ":" + p.GetElem()[0].GetName()
+			return nil
+		}
+		return fmt.Errorf("elem %q not found in module %q", pe[0], first)
+	}
+	// try children
 	for _, e := range sc.root.Dir {
 		if ee, ok := e.Dir[pe[0]]; ok {
 			return sc.buildPath(pe, p, ee)
