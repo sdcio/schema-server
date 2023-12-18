@@ -129,6 +129,7 @@ func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest
 			Version:     req.GetSchema().GetVersion(),
 			Files:       req.GetFile(),
 			Directories: req.GetDirectory(),
+			Excludes:    req.GetExclude(),
 		},
 	)
 	if err != nil {
