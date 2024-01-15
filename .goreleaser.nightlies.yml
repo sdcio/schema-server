@@ -23,6 +23,7 @@ dockers:
     goarch: amd64
     ids:
       - schema-server
+      - schemac
     image_templates:
       - "ghcr.io/iptecharch/{{ .ProjectName }}:v0.0.0-{{ .ShortCommit }}"
       - "ghcr.io/iptecharch/{{ .ProjectName }}:v0.0.0-dev-latest"
@@ -32,6 +33,7 @@ dockers:
     goarch: amd64
     ids:
       - schema-server
+      - schemac
     image_templates:
       - "registry.k8s.hans.io/iptecharch/{{ .ProjectName }}:v0.0.0-{{ .ShortCommit }}"
       - "registry.k8s.hans.io/iptecharch/{{ .ProjectName }}:v0.0.0-dev-latest"
