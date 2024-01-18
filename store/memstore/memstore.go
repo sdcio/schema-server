@@ -1,36 +1,35 @@
-package schema
+package memstore
 
 import (
 	"context"
 	"sort"
 	"sync"
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/utils"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/schema"
+	"github.com/iptecharch/schema-server/store"
+	"github.com/iptecharch/schema-server/utils"
 )
 
-type Store struct {
+type memStore struct {
 	ms      *sync.RWMutex
-	schemas map[SchemaKey]*Schema
+	schemas map[store.SchemaKey]*schema.Schema
 }
 
-type SchemaKey struct {
-	Name, Vendor, Version string
-}
-
-func NewStore() *Store {
-	return &Store{
+func New() store.Store {
+	return &memStore{
 		ms:      &sync.RWMutex{},
-		schemas: map[SchemaKey]*Schema{},
+		schemas: map[store.SchemaKey]*schema.Schema{},
 	}
 }
 
-func (s *Store) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
+func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
@@ -39,7 +38,7 @@ func (s *Store) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sd
 	}
 	pes := utils.ToStrings(req.GetPath(), false, true)
 
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
@@ -48,20 +47,20 @@ func (s *Store) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sd
 		return nil, err
 	}
 	resp := &sdcpb.GetSchemaResponse{
-		Schema: SchemaElemFromYEntry(e, req.GetWithDescription()),
+		Schema: schema.SchemaElemFromYEntry(e, req.GetWithDescription()),
 	}
 	log.Tracef("schema response: %v", resp)
 	return resp, nil
 }
 
-func (s *Store) HasSchema(scKey SchemaKey) bool {
+func (s *memStore) HasSchema(scKey store.SchemaKey) bool {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	_, ok := s.schemas[scKey]
 	return ok
 }
 
-func (s *Store) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
+func (s *memStore) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	rsp := &sdcpb.ListSchemaResponse{
@@ -78,14 +77,14 @@ func (s *Store) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*
 	return rsp, nil
 }
 
-func (s *Store) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
+func (s *memStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
@@ -103,13 +102,13 @@ func (s *Store) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetail
 	return rsp, nil
 }
 
-func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest) (*sdcpb.CreateSchemaResponse, error) {
+func (s *memStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest) (*sdcpb.CreateSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	s.ms.RLock()
-	_, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	_, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	s.ms.RUnlock()
 	if ok {
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v already exists", reqSchema)
@@ -122,7 +121,7 @@ func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest
 	case req.GetSchema().GetVersion() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
-	sc, err := NewSchema(
+	sc, err := schema.NewSchema(
 		&config.SchemaConfig{
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
@@ -139,7 +138,7 @@ func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest
 	// write
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[sc.Key()] = sc
+	s.schemas[store.Key(sc)] = sc
 	scrsp := req.GetSchema()
 
 	return &sdcpb.CreateSchemaResponse{
@@ -147,13 +146,13 @@ func (s *Store) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest
 	}, nil
 }
 
-func (s *Store) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
+func (s *memStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	s.ms.RLock()
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	s.ms.RUnlock()
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
@@ -164,11 +163,11 @@ func (s *Store) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest
 	}
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[nsc.Key()] = nsc
+	s.schemas[store.Key(nsc)] = nsc
 	return &sdcpb.ReloadSchemaResponse{}, nil
 }
 
-func (s *Store) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
+func (s *memStore) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -181,7 +180,7 @@ func (s *Store) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest
 	case req.GetSchema().GetVersion() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
-	schemaKey := SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}
+	schemaKey := store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}
 	s.ms.RLock()
 	_, ok := s.schemas[schemaKey]
 	s.ms.RUnlock()
@@ -194,7 +193,7 @@ func (s *Store) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest
 	return &sdcpb.DeleteSchemaResponse{}, nil
 }
 
-func (s *Store) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.ToPathResponse, error) {
+func (s *memStore) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.ToPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -208,7 +207,7 @@ func (s *Store) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.To
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
 	s.ms.RLock()
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	s.ms.RUnlock()
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v does not exist", reqSchema)
@@ -226,7 +225,7 @@ func (s *Store) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.To
 	return rsp, nil
 }
 
-func (s *Store) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
+func (s *memStore) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
@@ -240,7 +239,7 @@ func (s *Store) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
 	s.ms.RLock()
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	s.ms.RUnlock()
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v does not exist", reqSchema)
@@ -266,20 +265,21 @@ func (s *Store) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*
 	return rsp, nil
 }
 
-func (s *Store) AddSchema(sc *Schema) {
+func (s *memStore) AddSchema(sc *schema.Schema) error {
 	s.ms.Lock()
 	defer s.ms.Unlock()
-	s.schemas[sc.Key()] = sc
+	s.schemas[store.Key(sc)] = sc
+	return nil
 }
 
-func (s *Store) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRequest) (chan *sdcpb.SchemaElem, error) {
+func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRequest) (chan *sdcpb.SchemaElem, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
 	reqSchema := req.GetSchema()
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
-	sc, ok := s.schemas[SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
+	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
@@ -300,7 +300,7 @@ func (s *Store) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaReque
 				if !ok {
 					return
 				}
-				sch <- SchemaElemFromYEntry(e, req.GetWithDescription())
+				sch <- schema.SchemaElemFromYEntry(e, req.GetWithDescription())
 				if err != nil {
 					log.Errorf("%v", err)
 					return

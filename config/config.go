@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -14,10 +13,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 )
 
+const (
+	defaultServerAddress = ":55000"
+	defaultMessageSize   = 4 * 1024 * 1024
+	defaultRPCTimeout    = time.Minute
+)
+
 type Config struct {
-	GRPCServer *GRPCServer     `yaml:"grpc-server,omitempty" json:"grpc-server,omitempty"`
-	Schemas    []*SchemaConfig `yaml:"schemas,omitempty" json:"schemas,omitempty"`
-	Prometheus *PromConfig     `yaml:"prometheus,omitempty" json:"prometheus,omitempty"`
+	GRPCServer  *GRPCServer        `yaml:"grpc-server,omitempty" json:"grpc-server,omitempty"`
+	SchemaStore *SchemaStoreConfig `yaml:"schema-store,omitempty" json:"schema-store,omitempty"`
+	// Schemas     []*SchemaConfig    `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Prometheus *PromConfig `yaml:"prometheus,omitempty" json:"prometheus,omitempty"`
 }
 
 type TLS struct {
@@ -43,19 +49,23 @@ func New(file string) (*Config, error) {
 
 func (c *Config) validateSetDefaults() error {
 	if c.GRPCServer == nil {
-		return errors.New("grpc-server definition is required")
+		c.GRPCServer = &GRPCServer{}
 	}
 	if c.GRPCServer.Address == "" {
-		c.GRPCServer.Address = ":55000"
+		c.GRPCServer.Address = defaultServerAddress
 	}
 	if c.GRPCServer.MaxRecvMsgSize <= 0 {
-		c.GRPCServer.MaxRecvMsgSize = 4 * 1024 * 1024
+		c.GRPCServer.MaxRecvMsgSize = defaultMessageSize
 	}
 	if c.GRPCServer.RPCTimeout <= 0 {
-		c.GRPCServer.RPCTimeout = time.Minute
+		c.GRPCServer.RPCTimeout = defaultRPCTimeout
+	}
+	if c.SchemaStore == nil {
+		c.SchemaStore = &SchemaStoreConfig{}
+		return nil
 	}
 	var err error
-	for _, sc := range c.Schemas {
+	for _, sc := range c.SchemaStore.Schemas {
 		if err = sc.validateSetDefaults(); err != nil {
 			return err
 		}

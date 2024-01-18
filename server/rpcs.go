@@ -13,12 +13,14 @@ import (
 	"os"
 	"path"
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/schema"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/schema"
+	"github.com/iptecharch/schema-server/store"
 )
 
 func (s *Server) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
@@ -86,7 +88,7 @@ func (s *Server) UploadSchema(stream sdcpb.SchemaServer_UploadSchemaServer) erro
 		name = req.CreateSchema.GetSchema().GetName()
 		vendor = req.CreateSchema.GetSchema().GetVendor()
 		version = req.CreateSchema.GetSchema().GetVersion()
-		scKey := schema.SchemaKey{
+		scKey := store.SchemaKey{
 			Name:    name,
 			Vendor:  vendor,
 			Version: version,

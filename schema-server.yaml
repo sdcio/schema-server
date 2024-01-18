@@ -19,108 +19,114 @@ grpc-server:
   # If this is not set, it defaults to 4 * 1024 * 1024 (4MB)
   max-recv-msg-size: 25165824
 
-schemas:
-  - name: sros
-    vendor: Nokia
-    version: 22.10
-    files:
-      - ./lab/common/yang/sros_22.10/YANG/nokia-combined
-    directories:
-      - ./lab/common/yang/sros_22.10/YANG/ietf
-      - ./lab/common/yang/sros_22.10/YANG/nokia-sros-yang-extensions.yang
-  - name: sros
-    vendor: Nokia
-    version: 23.7
-    files:
-      - ./lab/common/yang/sros_23.7/YANG/nokia-combined
-    directories:
-      - ./lab/common/yang/sros_23.7/YANG/ietf
-      - ./lab/common/yang/sros_23.7/YANG/nokia-sros-yang-extensions.yang
-  - name: srl
-    vendor: Nokia
-    version: 23.10.1
-    files:
-      - ./lab/common/yang/srl-23.10.1/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-23.10.1/ietf
-      - ./lab/common/yang/srl-23.10.1/openconfig/extensions
-      - ./lab/common/yang/srl-23.10.1/openconfig/openconfig-extensions.yang
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 23.7.1
-    files:
-      - ./lab/common/yang/srl-23.7.1/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-23.7.1/ietf
-      - ./lab/common/yang/srl-23.7.1/openconfig/extensions
-      - ./lab/common/yang/srl-23.7.1/openconfig/openconfig-extensions.yang
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 23.3.2
-    files:
-      - ./lab/common/yang/srl-23.3.2/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-23.3.2/ietf
-      - ./lab/common/yang/srl-23.3.2/openconfig/extensions
-      - ./lab/common/yang/srl-23.3.2/openconfig/openconfig-extensions.yang
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 22.11.2
-    files:
-      - ./lab/common/yang/srl-22.11.2/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-22.11.2/ietf
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 22.11.1
-    files:
-      - ./lab/common/yang/srl-22.11.1/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-22.11.1/ietf
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 22.6.4
-    files:
-      - ./lab/common/yang/srl-22.6.4/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-22.6.4/ietf
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 22.3.2
-    files:
-      - ./lab/common/yang/srl-22.3.2/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-22.3.2/ietf
-    excludes:
-      - .*tools.*
-  - name: srl
-    vendor: Nokia
-    version: 21.11.3
-    files:
-      - ./lab/common/yang/srl-21.11.3/srl_nokia/models
-    directories:
-      - ./lab/common/yang/srl-21.11.3/ietf
-    excludes:
-      - .*tools.*
-  # - name: junos
-  #   vendor: Juniper
-  #   version: 22.3R1
-  #   files:
-  #     - ./lab/common/yang/junos-22.3R1/models
-  #   directories:
-  #     - ./lab/common/yang/junos-22.3R1/common
+schema-store:
+  # type: memory # or persistent
+  type: persistent # persistent # memory # persistent
+  # path: # db path in case of persistent store
+  path: ./schema-store
+
+  schemas:
+    - name: sros
+      vendor: Nokia
+      version: 22.10
+      files:
+        - ./lab/common/yang/sros_22.10/YANG/nokia-combined
+      directories:
+        - ./lab/common/yang/sros_22.10/YANG/ietf
+        - ./lab/common/yang/sros_22.10/YANG/nokia-sros-yang-extensions.yang
+    - name: sros
+      vendor: Nokia
+      version: 23.7
+      files:
+        - ./lab/common/yang/sros_23.7/YANG/nokia-combined
+      directories:
+        - ./lab/common/yang/sros_23.7/YANG/ietf
+        - ./lab/common/yang/sros_23.7/YANG/nokia-sros-yang-extensions.yang
+    # - name: srl
+    #   vendor: Nokia
+    #   version: 23.10.1
+    #   files:
+    #     - ./lab/common/yang/srl-23.10.1/srl_nokia/models
+    #   directories:
+    #     - ./lab/common/yang/srl-23.10.1/ietf
+    #     - ./lab/common/yang/srl-23.10.1/openconfig/extensions
+    #     - ./lab/common/yang/srl-23.10.1/openconfig/openconfig-extensions.yang
+    #   excludes:
+    #     - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 23.7.1
+      files:
+        - ./lab/common/yang/srl-23.7.1/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-23.7.1/ietf
+        - ./lab/common/yang/srl-23.7.1/openconfig/extensions
+        - ./lab/common/yang/srl-23.7.1/openconfig/openconfig-extensions.yang
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 23.3.2
+      files:
+        - ./lab/common/yang/srl-23.3.2/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-23.3.2/ietf
+        - ./lab/common/yang/srl-23.3.2/openconfig/extensions
+        - ./lab/common/yang/srl-23.3.2/openconfig/openconfig-extensions.yang
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 22.11.2
+      files:
+        - ./lab/common/yang/srl-22.11.2/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-22.11.2/ietf
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 22.11.1
+      files:
+        - ./lab/common/yang/srl-22.11.1/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-22.11.1/ietf
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 22.6.4
+      files:
+        - ./lab/common/yang/srl-22.6.4/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-22.6.4/ietf
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 22.3.2
+      files:
+        - ./lab/common/yang/srl-22.3.2/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-22.3.2/ietf
+      excludes:
+        - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 21.11.3
+      files:
+        - ./lab/common/yang/srl-21.11.3/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-21.11.3/ietf
+      excludes:
+        - .*tools.*
+    # - name: junos
+    #   vendor: Juniper
+    #   version: 22.3R1
+    #   files:
+    #     - ./lab/common/yang/junos-22.3R1/models
+    #   directories:
+    #     - ./lab/common/yang/junos-22.3R1/common
   
 prometheus:
   address: ":55090"

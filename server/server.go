@@ -10,8 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/schema"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -20,6 +18,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Install the gzip compressor
+
+	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/schema"
+	"github.com/iptecharch/schema-server/store"
+	"github.com/iptecharch/schema-server/store/memstore"
+	"github.com/iptecharch/schema-server/store/persiststore"
 )
 
 type Server struct {
@@ -27,7 +31,7 @@ type Server struct {
 
 	cfn context.CancelFunc
 
-	schemaStore *schema.Store
+	schemaStore store.Store
 
 	srv *grpc.Server
 	sdcpb.UnimplementedSchemaServerServer
@@ -39,11 +43,21 @@ type Server struct {
 func NewServer(c *config.Config) (*Server, error) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	var s = &Server{
-		config:      c,
-		cfn:         cancel,
-		schemaStore: schema.NewStore(),
-		router:      mux.NewRouter(),
-		reg:         prometheus.NewRegistry(),
+		config: c,
+		cfn:    cancel,
+		router: mux.NewRouter(),
+		reg:    prometheus.NewRegistry(),
+	}
+
+	switch c.SchemaStore.Type {
+	case "persistent":
+		var err error
+		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path)
+		if err != nil {
+			return nil, err
+		}
+	default: // memory
+		s.schemaStore = memstore.New()
 	}
 
 	// gRPC server options
@@ -82,19 +96,24 @@ func NewServer(c *config.Config) (*Server, error) {
 
 	s.srv = grpc.NewServer(opts...)
 	// parse schemas
-	log.Infof("parsing %d schema(s)...", len(c.Schemas))
+	log.Infof("parsing %d schema(s)...", len(c.SchemaStore.Schemas))
 	wg := new(sync.WaitGroup)
-	wg.Add(len(c.Schemas))
-	for _, sCfg := range c.Schemas {
+	wg.Add(len(c.SchemaStore.Schemas))
+	for _, sCfg := range c.SchemaStore.Schemas {
 		go func(sCfg *config.SchemaConfig) {
 			defer wg.Done()
 			sc, err := schema.NewSchema(sCfg)
 			if err != nil {
 				log.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
-				// return nil, fmt.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
 				return
 			}
-			s.schemaStore.AddSchema(sc)
+			now := time.Now()
+			err = s.schemaStore.AddSchema(sc)
+			if err != nil {
+				log.Errorf("failed to add schema %s: %v", sc.UniqueName(""), err)
+				return
+			}
+			log.Infof("schema %s saved in %s", sc.UniqueName(""), time.Since(now))
 		}(sCfg)
 	}
 	wg.Wait()
@@ -141,6 +160,6 @@ func (s *Server) Stop() {
 	s.cfn()
 }
 
-func (s *Server) SchemaStore() *schema.Store {
+func (s *Server) SchemaStore() store.Store {
 	return s.schemaStore
 }
