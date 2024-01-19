@@ -114,8 +114,8 @@ func (s *memStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequ
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v already exists", reqSchema)
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":
@@ -173,8 +173,8 @@ func (s *memStore) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequ
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":
@@ -199,8 +199,8 @@ func (s *memStore) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":
@@ -231,8 +231,8 @@ func (s *memStore) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest)
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":

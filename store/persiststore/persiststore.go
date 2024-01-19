@@ -40,6 +40,7 @@ type persistStore struct {
 	path string
 	cfn  context.CancelFunc
 	db   *badger.DB
+	// TODO: ttlcache
 }
 
 func New(ctx context.Context, p string) (store.Store, error) {
@@ -119,6 +120,7 @@ func (s *persistStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchem
 		Schema:    req.GetSchema(),
 		File:      []string{},
 		Directory: []string{},
+		Exclude:   []string{},
 	}
 	err := s.db.View(func(txn *badger.Txn) error {
 		k := buildSchemaKey(store.SchemaKey{
@@ -141,7 +143,7 @@ func (s *persistStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchem
 		}
 		rs.File = cfg["files"]
 		rs.Directory = cfg["directories"]
-		// TODO: excludes
+		rs.Exclude = cfg["excludes"]
 		return nil
 	})
 	if err != nil {
@@ -164,8 +166,8 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 		return nil, status.Errorf(codes.InvalidArgument, "schema %v already exists", reqSchema)
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":
@@ -196,7 +198,39 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 }
 
 func (s *persistStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
-	return nil, nil
+	details, err := s.GetSchemaDetails(ctx, &sdcpb.GetSchemaDetailsRequest{
+		Schema: req.GetSchema(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	// parse
+	sc, err := schema.NewSchema(
+		&config.SchemaConfig{
+			Name:        req.GetSchema().GetName(),
+			Vendor:      req.GetSchema().GetVendor(),
+			Version:     req.GetSchema().GetVersion(),
+			Files:       details.GetFile(),
+			Directories: details.GetDirectory(),
+			Excludes:    details.GetExclude(),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.DeleteSchema(ctx, &sdcpb.DeleteSchemaRequest{
+		Schema: req.GetSchema(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	err = s.AddSchema(sc)
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("schema %s saved in %s", sc.UniqueName(""), time.Since(now))
+	return &sdcpb.ReloadSchemaResponse{}, nil
 }
 
 func (s *persistStore) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
@@ -205,8 +239,8 @@ func (s *persistStore) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchema
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
 	switch {
-	case req.GetSchema().GetName() == "":
-		return nil, status.Error(codes.InvalidArgument, "missing schema name")
+	// case req.GetSchema().GetName() == "":
+	// 	return nil, status.Error(codes.InvalidArgument, "missing schema name")
 	case req.GetSchema().GetVendor() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema vendor")
 	case req.GetSchema().GetVersion() == "":
@@ -378,8 +412,102 @@ OUTER:
 }
 
 func (s *persistStore) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
-	// TODO: implement
-	return nil, nil
+	p := req.GetPath()
+	// does the path exist ?
+	rsp, err := s.GetSchema(ctx, &sdcpb.GetSchemaRequest{
+		Path:   p,
+		Schema: req.GetSchema(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	// final response
+	pRsp := &sdcpb.ExpandPathResponse{
+		Path:  []*sdcpb.Path{},
+		Xpath: []string{},
+	}
+
+	switch rsp := rsp.GetSchema().Schema.(type) {
+	case *sdcpb.SchemaElem_Container:
+		pp := proto.Clone(p).(*sdcpb.Path)
+		if pp.Elem == nil {
+			pp.Elem = make([]*sdcpb.PathElem, 0, 1)
+		}
+		// add keys to the last path element
+		for _, key := range rsp.Container.GetKeys() {
+			// pp = proto.Clone(pp).(*sdcpb.Path)
+			if pp.GetElem()[len(pp.GetElem())-1].GetKey() == nil {
+				pp.Elem[len(pp.GetElem())-1].Key = make(map[string]string)
+			}
+			pp.Elem[len(pp.GetElem())-1].Key[key.Name] = "*"
+			// DO NOT ADD paths with keys as leaves (this can be done client side)
+		}
+		// add fields (YANG leaf)
+		for _, field := range rsp.Container.GetFields() {
+			pp := proto.Clone(pp).(*sdcpb.Path)
+			if pp.Elem == nil {
+				pp.Elem = make([]*sdcpb.PathElem, 0, 1)
+			}
+			pp.Elem = append(pp.Elem, &sdcpb.PathElem{Name: field.Name})
+			addPath(pRsp, pp, req.GetDataType(), field.IsState, req.GetXpath())
+		}
+		// add leaf-lists
+		for _, lf := range rsp.Container.GetLeaflists() {
+			pp := proto.Clone(pp).(*sdcpb.Path)
+			if pp.Elem == nil {
+				pp.Elem = make([]*sdcpb.PathElem, 0, 1)
+			}
+			pp.Elem = append(pp.Elem, &sdcpb.PathElem{Name: lf.Name})
+			addPath(pRsp, pp, req.GetDataType(), lf.IsState, req.GetXpath())
+		}
+		// add containers(YANG container, list, choice, case,...)
+		for _, child := range rsp.Container.GetChildren() {
+			pp := proto.Clone(pp).(*sdcpb.Path)
+			if pp.Elem == nil {
+				pp.Elem = make([]*sdcpb.PathElem, 0, 1)
+			}
+			pp.Elem = append(pp.Elem, &sdcpb.PathElem{Name: child})
+			expRsp, err := s.ExpandPath(ctx, &sdcpb.ExpandPathRequest{
+				Path:     pp,
+				Schema:   req.GetSchema(),
+				DataType: req.GetDataType(),
+				Xpath:    req.GetXpath(),
+			})
+			if err != nil {
+				return nil, err
+			}
+			pRsp.Path = append(pRsp.Path, expRsp.Path...)
+			pRsp.Xpath = append(pRsp.Xpath, expRsp.Xpath...)
+		}
+	case *sdcpb.SchemaElem_Field:
+		addPath(pRsp, p, req.GetDataType(), rsp.Field.IsState, req.GetXpath())
+	case *sdcpb.SchemaElem_Leaflist:
+		addPath(pRsp, p, req.GetDataType(), rsp.Leaflist.IsState, req.GetXpath())
+	}
+	return pRsp, nil
+}
+
+// addPath adds path p to response rsp based on the requested dataType and the schema object isState value
+func addPath(rsp *sdcpb.ExpandPathResponse, p *sdcpb.Path, dt sdcpb.DataType, isState, xpath bool) {
+	switch dt {
+	case sdcpb.DataType_ALL:
+	case sdcpb.DataType_CONFIG:
+		if isState {
+			return
+		}
+	case sdcpb.DataType_STATE:
+		if !isState {
+			return
+		}
+	}
+	if xpath {
+		rsp.Xpath = append(
+			rsp.Xpath,
+			utils.ToXPath(p, false),
+		)
+		return
+	}
+	rsp.Path = append(rsp.Path, p)
 }
 
 // helpers
@@ -394,25 +522,20 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 		}
 		return nil
 	}
-	// store it
+	// build entry key
 	key := buildEntryKey(store.Key(sc), getEntryPath(e))
+	// get entry proto
 	se := schema.SchemaElemFromYEntry(e, true)
 	b, err := proto.Marshal(se)
 	if err != nil {
 		return err
 	}
-	// fmt.Printf("%s\n", key[1:])
+	// store entry proto bytes
 	err = wb.Set(key, b)
 	if err != nil {
 		return err
 	}
-	// err = s.db.Update(func(txn *badger.Txn) error {
-	// 	return txn.Set(key, b)
-	// })
-	// if err != nil {
-	// 	return err
-	// }
-	// children
+	// do the same for entry children
 	for _, ee := range e.Dir {
 		err = s.addSchemaElem(wb, sc, ee)
 		if err != nil {
@@ -548,12 +671,13 @@ func getModules(txn *badger.Txn, sc store.SchemaKey) ([]string, error) {
 }
 
 func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaRequest, sck store.SchemaKey) (*sdcpb.GetSchemaResponse, error) {
+	var err error
 	pes := utils.ToStrings(req.GetPath(), false, true)
-	// fmt.Println("PES", pes, len(pes))
 	sce := new(sdcpb.SchemaElem)
+
 	switch len(pes) {
 	case 0: // key all i.e "root"
-		err := s.db.View(func(txn *badger.Txn) error {
+		err = s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
 			if err != nil {
@@ -581,17 +705,20 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 	moduleName := ""
 	if index := strings.Index(pes[0], ":"); index > 0 {
 		moduleName = pes[0][:index]
-		pes[0] = pes[0][:index+1]
+		pes[0] = pes[0][index+1:]
 	}
-	// s.db.NewTransaction(update bool)
+	var modules []string
 	// path has module prefix
 	if moduleName != "" {
+		modules = []string{moduleName}
+	} else {
+		// path does not have module prefix
+		modules, err = s.getModules(sck)
+		if err != nil {
+			return nil, err
+		}
 	}
-	// path does not have module prefix
-	modules, err := s.getModules(sck)
-	if err != nil {
-		return nil, err
-	}
+
 	npe := make([]string, 1+len(pes))
 	copy(npe[1:], pes)
 	err = s.db.View(func(txn *badger.Txn) error {
@@ -603,7 +730,6 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 				npe[0] = module
 				k = buildEntryKey(sck, npe)
 			}
-
 			item, err := txn.Get(k)
 			if err != nil {
 				continue

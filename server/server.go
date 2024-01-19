@@ -59,7 +59,13 @@ func NewServer(c *config.Config) (*Server, error) {
 	default: // memory
 		s.schemaStore = memstore.New()
 	}
-
+	ls, err := s.schemaStore.ListSchema(ctx, &sdcpb.ListSchemaRequest{})
+	if err != nil {
+		return nil, err
+	}
+	for _, storeSc := range ls.GetSchema() {
+		log.Debugf("schema store has schema %s", storeSc.String())
+	}
 	// gRPC server options
 	opts := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(c.GRPCServer.MaxRecvMsgSize),
@@ -96,12 +102,21 @@ func NewServer(c *config.Config) (*Server, error) {
 
 	s.srv = grpc.NewServer(opts...)
 	// parse schemas
-	log.Infof("parsing %d schema(s)...", len(c.SchemaStore.Schemas))
+	log.Infof("%d schema(s) configured...", len(c.SchemaStore.Schemas))
 	wg := new(sync.WaitGroup)
 	wg.Add(len(c.SchemaStore.Schemas))
 	for _, sCfg := range c.SchemaStore.Schemas {
 		go func(sCfg *config.SchemaConfig) {
 			defer wg.Done()
+			sck := store.SchemaKey{
+				Name:    sCfg.Name,
+				Vendor:  sCfg.Vendor,
+				Version: sCfg.Version,
+			}
+			if s.schemaStore.HasSchema(sck) {
+				log.Infof("schema %s already exists in the store: not reloading it...", sck)
+				return
+			}
 			sc, err := schema.NewSchema(sCfg)
 			if err != nil {
 				log.Errorf("schema %s parsing failed: %v", sCfg.Name, err)

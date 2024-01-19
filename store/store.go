@@ -12,6 +12,10 @@ type SchemaKey struct {
 	Name, Vendor, Version string
 }
 
+func (sck SchemaKey) String() string {
+	return sck.Name + "@" + sck.Vendor + "@" + sck.Version
+}
+
 func Key(s *schema.Schema) SchemaKey {
 	return SchemaKey{
 		Name:    s.Name(),

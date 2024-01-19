@@ -58,11 +58,13 @@ START:
 		os.Exit(1)
 	}
 	log.Infof("read config:\n%s", string(b))
+
 	s, err = server.NewServer(cfg)
 	if err != nil {
 		log.Errorf("failed to create server: %v", err)
 		os.Exit(1)
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	setupCloseHandler(cancel)
 

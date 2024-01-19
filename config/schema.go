@@ -22,7 +22,7 @@ type SchemaConfig struct {
 }
 
 func (sc *SchemaConfig) validateSetDefaults() error {
-	if sc.Name == "" || sc.Vendor == "" || sc.Version == "" {
+	if sc.Vendor == "" || sc.Version == "" {
 		return errors.New("schema name, vendor and version should be set")
 	}
 	return nil
