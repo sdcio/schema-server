@@ -259,11 +259,16 @@ func ToXPath(p *sdcpb.Path, noKeys bool) string {
 	for i, pe := range elems {
 		sb.WriteString(pe.GetName())
 		if !noKeys {
-			for k, v := range pe.GetKey() {
+			keys := make([]string, 0, len(pe.GetKey()))
+			for k := range pe.GetKey() {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
 				sb.WriteString("[")
 				sb.WriteString(k)
 				sb.WriteString("=")
-				sb.WriteString(v)
+				sb.WriteString(pe.GetKey()[k])
 				sb.WriteString("]")
 			}
 		}

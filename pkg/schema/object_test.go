@@ -8,7 +8,7 @@ import (
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 
-	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/pkg/config"
 )
 
 func TestSchema_BuildPath(t *testing.T) {

@@ -5,9 +5,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/iptecharch/schema-server/config"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/iptecharch/schema-server/pkg/config"
+)
+
+const (
+	RootName = "__root__"
 )
 
 type Schema struct {
@@ -39,7 +44,7 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		return sc, err
 	}
 	sc.root = &yang.Entry{
-		Name: "root",
+		Name: RootName,
 		Kind: yang.DirectoryEntry,
 		Dir:  make(map[string]*yang.Entry, len(sc.modules.Modules)),
 		Annotation: map[string]interface{}{
@@ -61,14 +66,6 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 	log.Infof("schema %s parsed in %s", sc.UniqueName(""), time.Since(now))
 	sc.modules = nil
 	return sc, nil
-}
-
-func (s *Schema) Key() SchemaKey {
-	return SchemaKey{
-		Name:    s.Name(),
-		Vendor:  s.Vendor(),
-		Version: s.Version(),
-	}
 }
 
 func (s *Schema) Reload() (*Schema, error) {
@@ -115,6 +112,10 @@ func (s *Schema) Dirs() []string {
 	return s.config.Directories
 }
 
+func (s *Schema) Excludes() []string {
+	return s.config.Excludes
+}
+
 func (s *Schema) Walk(e *yang.Entry, fn func(ec *yang.Entry) error) error {
 	if e == nil {
 		e = s.root
@@ -140,4 +141,9 @@ func (s *Schema) Walk(e *yang.Entry, fn func(ec *yang.Entry) error) error {
 		}
 	}
 	return nil
+}
+
+func (s *Schema) Reset() {
+	s.modules = nil
+	s.root = nil
 }

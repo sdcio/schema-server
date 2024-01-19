@@ -53,3 +53,9 @@ bin/schemac schema expand --name sros --version 22.10 --vendor Nokia --path /con
 #
 bin/schemac schema bench --name sros --version 22.10 --vendor Nokia --path /configure
 ```
+
+```shell
+bin/schemac schema upload --name sros --version 22.10 --vendor Nokia \
+--file lab/common/yang/sros_22.10/YANG/nokia-combined/ \
+--dir lab/common/yang/sros_22.10/YANG
+```

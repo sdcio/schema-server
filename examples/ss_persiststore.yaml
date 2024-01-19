@@ -13,7 +13,7 @@ grpc-server:
     # if true, enables schema RPCs
     enabled: true
     # directory to store the uploaded schemas
-    schemas-directory: ./schemas-dir
+    schemas-directory: ./schemas
 
   # max message size in bytes the server can receive. 
   # If this is not set, it defaults to 4 * 1024 * 1024 (4MB)
@@ -42,17 +42,17 @@ schema-store:
       directories:
         - ./lab/common/yang/sros_23.7/YANG/ietf
         - ./lab/common/yang/sros_23.7/YANG/nokia-sros-yang-extensions.yang
-    # - name: srl
-    #   vendor: Nokia
-    #   version: 23.10.1
-    #   files:
-    #     - ./lab/common/yang/srl-23.10.1/srl_nokia/models
-    #   directories:
-    #     - ./lab/common/yang/srl-23.10.1/ietf
-    #     - ./lab/common/yang/srl-23.10.1/openconfig/extensions
-    #     - ./lab/common/yang/srl-23.10.1/openconfig/openconfig-extensions.yang
-    #   excludes:
-    #     - .*tools.*
+    - name: srl
+      vendor: Nokia
+      version: 23.10.1
+      files:
+        - ./lab/common/yang/srl-23.10.1/srl_nokia/models
+      directories:
+        - ./lab/common/yang/srl-23.10.1/ietf
+        - ./lab/common/yang/srl-23.10.1/openconfig/extensions
+        - ./lab/common/yang/srl-23.10.1/openconfig/openconfig-extensions.yang
+      excludes:
+        - .*tools.*
     - name: srl
       vendor: Nokia
       version: 23.7.1

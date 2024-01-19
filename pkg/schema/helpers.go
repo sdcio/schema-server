@@ -9,6 +9,7 @@ import (
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sirupsen/logrus"
 )
 
 func (sc *Schema) readYANGFiles() error {
@@ -47,10 +48,14 @@ MAIN:
 	}
 
 	if errors := sc.modules.Process(); len(errors) > 0 {
+		es := make([]string, 0, len(errors))
 		for _, e := range errors {
-			fmt.Fprintf(os.Stderr, "yang processing error: %v\n", e)
+			es = append(es, "- "+e.Error())
+			logrus.Errorf("schema %s failed with: %v", sc.UniqueName(""), e)
 		}
-		return fmt.Errorf("yang processing failed with %d errors", len(errors))
+		//
+		fErr := fmt.Errorf("yang processing failed with %d error(s):\n%s", len(errors), strings.Join(es, "\n"))
+		return fErr
 	}
 	return nil
 }

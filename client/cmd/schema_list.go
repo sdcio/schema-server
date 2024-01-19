@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -39,7 +40,7 @@ var schemaListCmd = &cobra.Command{
 		}
 		fmt.Println("response:")
 		switch format {
-		case "table":
+		case "table", "":
 			tableData := make([][]string, 0, len(schemaList.GetSchema()))
 			for _, schema := range schemaList.GetSchema() {
 				tableData = append(tableData, []string{schema.GetName(), schema.GetVendor(), schema.GetVersion()})
@@ -60,8 +61,14 @@ var schemaListCmd = &cobra.Command{
 			table.SetAutoWrapText(false)
 			table.AppendBulk(tableData)
 			table.Render()
-		default:
+		case "proto":
 			fmt.Println(prototext.Format(schemaList))
+		case "json":
+			b, err := json.MarshalIndent(schemaList.GetSchema(), "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(b))
 		}
 
 		return nil

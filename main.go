@@ -12,8 +12,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/server"
+	"github.com/iptecharch/schema-server/pkg/config"
+	"github.com/iptecharch/schema-server/pkg/server"
 )
 
 var version = "dev"
@@ -58,11 +58,13 @@ START:
 		os.Exit(1)
 	}
 	log.Infof("read config:\n%s", string(b))
+
 	s, err = server.NewServer(cfg)
 	if err != nil {
 		log.Errorf("failed to create server: %v", err)
 		os.Exit(1)
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	setupCloseHandler(cancel)
 
