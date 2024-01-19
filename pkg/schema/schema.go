@@ -8,7 +8,7 @@ import (
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/iptecharch/schema-server/config"
+	"github.com/iptecharch/schema-server/pkg/config"
 )
 
 const (

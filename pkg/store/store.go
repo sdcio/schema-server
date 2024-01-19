@@ -5,7 +5,7 @@ import (
 
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 
-	"github.com/iptecharch/schema-server/schema"
+	"github.com/iptecharch/schema-server/pkg/schema"
 )
 
 type SchemaKey struct {

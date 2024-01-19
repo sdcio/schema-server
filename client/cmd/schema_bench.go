@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/iptecharch/schema-server/utils"
+	"github.com/iptecharch/schema-server/pkg/utils"
 )
 
 // schemaBenchCmd represents the bench command

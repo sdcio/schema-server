@@ -19,11 +19,11 @@ import (
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Install the gzip compressor
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/schema"
-	"github.com/iptecharch/schema-server/store"
-	"github.com/iptecharch/schema-server/store/memstore"
-	"github.com/iptecharch/schema-server/store/persiststore"
+	"github.com/iptecharch/schema-server/pkg/config"
+	"github.com/iptecharch/schema-server/pkg/schema"
+	"github.com/iptecharch/schema-server/pkg/store"
+	"github.com/iptecharch/schema-server/pkg/store/memstore"
+	"github.com/iptecharch/schema-server/pkg/store/persiststore"
 )
 
 type Server struct {

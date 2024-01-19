@@ -8,7 +8,7 @@ import (
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/iptecharch/schema-server/utils"
+	"github.com/iptecharch/schema-server/pkg/utils"
 )
 
 func (sc *Schema) ExpandPath(p *sdcpb.Path, dt sdcpb.DataType) ([]*sdcpb.Path, error) {

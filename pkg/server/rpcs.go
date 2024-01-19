@@ -19,9 +19,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iptecharch/schema-server/config"
-	"github.com/iptecharch/schema-server/schema"
-	"github.com/iptecharch/schema-server/store"
+	"github.com/iptecharch/schema-server/pkg/config"
+	"github.com/iptecharch/schema-server/pkg/schema"
+	"github.com/iptecharch/schema-server/pkg/store"
 )
 
 func (s *Server) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
