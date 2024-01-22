@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -50,14 +51,16 @@ func NewServer(c *config.Config) (*Server, error) {
 	}
 
 	switch c.SchemaStore.Type {
-	case "persistent":
+	case config.StoreTypePersistent:
 		var err error
-		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path)
+		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path, c.SchemaStore.Cache)
 		if err != nil {
 			return nil, err
 		}
-	default: // memory
+	case config.StoreTypeMemory:
 		s.schemaStore = memstore.New()
+	default:
+		return nil, fmt.Errorf("unknown schema store type %q", c.SchemaStore.Type)
 	}
 	ls, err := s.schemaStore.ListSchema(ctx, &sdcpb.ListSchemaRequest{})
 	if err != nil {
