@@ -12,6 +12,7 @@ import (
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/dgraph-io/badger/v4/options"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
@@ -36,23 +37,38 @@ var (
 	ErrKeyNotFound    = errors.New("key not found")
 )
 
-type persistStore struct {
-	path string
-	cfn  context.CancelFunc
-	db   *badger.DB
-	// TODO: ttlcache
+type cacheKey struct {
+	store.SchemaKey
+	Path string
 }
 
-func New(ctx context.Context, p string) (store.Store, error) {
-	s := &persistStore{
-		path: p,
-	}
+type persistStore struct {
+	path                 string
+	cacheWithDescription bool
+	cfn                  context.CancelFunc
+	db                   *badger.DB
+	cache                *ttlcache.Cache[cacheKey, *sdcpb.GetSchemaResponse]
+}
+
+func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfig) (store.Store, error) {
+	s := &persistStore{path: p}
 	var err error
 	s.db, err = s.openDB(ctx)
 	if err != nil {
 		return nil, err
 	}
-
+	// without cache
+	if cfg == nil {
+		return s, nil
+	}
+	// with cache
+	s.cacheWithDescription = cfg.WithDescription
+	s.cache = ttlcache.New[cacheKey, *sdcpb.GetSchemaResponse](
+		ttlcache.WithTTL[cacheKey, *sdcpb.GetSchemaResponse](cfg.TTL),
+		ttlcache.WithCapacity[cacheKey, *sdcpb.GetSchemaResponse](cfg.Capacity),
+	)
+	// start cache cleanup
+	go s.cache.Start()
 	return s, nil
 }
 
@@ -671,8 +687,25 @@ func getModules(txn *badger.Txn, sc store.SchemaKey) ([]string, error) {
 }
 
 func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaRequest, sck store.SchemaKey) (*sdcpb.GetSchemaResponse, error) {
-	var err error
 	pes := utils.ToStrings(req.GetPath(), false, true)
+	cKey := cacheKey{
+		SchemaKey: sck,
+		Path:      strings.Join(pes, "/"),
+	}
+	if s.cache != nil {
+		if item := s.cache.Get(cKey, ttlcache.WithDisableTouchOnHit[cacheKey, *sdcpb.GetSchemaResponse]()); item != nil {
+			// clone it
+			rsp := proto.Clone(item.Value()).(*sdcpb.GetSchemaResponse)
+			// apply modifiers
+			// if the request does not need the description and the
+			// cache stores with description, remove it.
+			if !req.GetWithDescription() && s.cacheWithDescription {
+				return removeDescription(rsp), nil
+			}
+			return rsp, nil
+		}
+	}
+	var err error
 	sce := new(sdcpb.SchemaElem)
 
 	switch len(pes) {
@@ -752,5 +785,25 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 	if err != nil {
 		return nil, err
 	}
+	rsp := &sdcpb.GetSchemaResponse{Schema: sce}
+	if s.cache != nil {
+		s.cache.Set(cKey, rsp, ttlcache.DefaultTTL)
+	}
 	return &sdcpb.GetSchemaResponse{Schema: sce}, nil
+}
+
+func removeDescription(rsp *sdcpb.GetSchemaResponse) *sdcpb.GetSchemaResponse {
+	if rsp == nil {
+		return nil
+	}
+
+	switch rsp.GetSchema().Schema.(type) {
+	case *sdcpb.SchemaElem_Container:
+		rsp.GetSchema().GetContainer().Description = ""
+	case *sdcpb.SchemaElem_Field:
+		rsp.GetSchema().GetField().Description = ""
+	case *sdcpb.SchemaElem_Leaflist:
+		rsp.GetSchema().GetLeaflist().Description = ""
+	}
+	return rsp
 }

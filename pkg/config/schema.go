@@ -2,14 +2,27 @@ package config
 
 import (
 	"errors"
+	"time"
 
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 )
 
+const (
+	StoreTypePersistent = "persistent"
+	StoreTypeMemory     = "memory"
+)
+
 type SchemaStoreConfig struct {
-	Type    string          `yaml:"type,omitempty" json:"type,omitempty"`
-	Path    string          `yaml:"path,omitempty" json:"path,omitempty"`
-	Schemas []*SchemaConfig `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Type    string                         `yaml:"type,omitempty" json:"type,omitempty"`
+	Path    string                         `yaml:"path,omitempty" json:"path,omitempty"`
+	Cache   *SchemaPersistStoreCacheConfig `json:"cache,omitempty"`
+	Schemas []*SchemaConfig                `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+}
+
+type SchemaPersistStoreCacheConfig struct {
+	TTL             time.Duration `yaml:"ttl,omitempty" json:"ttl,omitempty"`
+	Capacity        uint64        `yaml:"capacity,omitempty" json:"capacity,omitempty"`
+	WithDescription bool          `yaml:"with-description,omitempty" json:"with-description,omitempty"`
 }
 
 type SchemaConfig struct {
