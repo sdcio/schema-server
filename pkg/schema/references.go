@@ -3,10 +3,11 @@ package schema
 import (
 	"strings"
 
-	"github.com/iptecharch/schema-server/utils"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/iptecharch/schema-server/pkg/utils"
 )
 
 func (sc *Schema) buildReferencesAnnotation() error {
@@ -154,7 +155,7 @@ func relativeToAbsPath(p *sdcpb.Path, e *yang.Entry) *sdcpb.Path {
 	if ce == nil {
 		return np
 	}
-	for ce != nil && ce.Parent != nil && ce.Parent.Name != "root" {
+	for ce != nil && ce.Parent != nil && ce.Parent.Name != RootName {
 		np.Elem = append([]*sdcpb.PathElem{{Name: ce.Name}}, np.GetElem()...)
 		ce = ce.Parent
 	}

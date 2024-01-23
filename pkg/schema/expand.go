@@ -1,12 +1,14 @@
 package schema
 
 import (
+	"sort"
 	"strings"
 
-	"github.com/iptecharch/schema-server/utils"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/iptecharch/schema-server/pkg/utils"
 )
 
 func (sc *Schema) ExpandPath(p *sdcpb.Path, dt sdcpb.DataType) ([]*sdcpb.Path, error) {
@@ -21,7 +23,15 @@ func (sc *Schema) ExpandPath(p *sdcpb.Path, dt sdcpb.DataType) ([]*sdcpb.Path, e
 	case e.IsLeaf():
 		return []*sdcpb.Path{p}, nil
 	}
+	keys := map[string]struct{}{}
+	for _, k := range strings.Fields(e.Key) {
+		keys[k] = struct{}{}
+	}
 	for _, c := range e.Dir {
+		// skip keys
+		if _, ok := keys[c.Name]; ok {
+			continue
+		}
 		for _, pe := range sc.getPathElems(c, dt) {
 			np := &sdcpb.Path{
 				Elem: make([]*sdcpb.PathElem, 0, len(p.GetElem())+len(pe)),
@@ -120,7 +130,7 @@ func (sc *Schema) getPathElems(e *yang.Entry, dt sdcpb.DataType) [][]*sdcpb.Path
 func populatePathKeys(e *yang.Entry, p *sdcpb.Path) {
 	ce := e
 	for i := len(p.GetElem()) - 1; i >= 0; i-- {
-		if ce.Parent != nil && ce.Parent.Name == "root" {
+		if ce.Parent != nil && ce.Parent.Name == RootName {
 			return
 		}
 		populatePathElemKeys(ce, p.GetElem()[i])
@@ -131,7 +141,9 @@ func populatePathKeys(e *yang.Entry, p *sdcpb.Path) {
 func populatePathElemKeys(e *yang.Entry, pe *sdcpb.PathElem) {
 	switch {
 	case e.IsList():
-		for _, k := range strings.Fields(e.Key) {
+		keys := strings.Fields(e.Key)
+		sort.Strings(keys)
+		for _, k := range keys {
 			if pe.GetKey() == nil {
 				pe.Key = make(map[string]string)
 			}

@@ -13,3 +13,5 @@ keys
 clabs/
 tests/results
 dist/
+schema-store
+schema-dir

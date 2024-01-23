@@ -304,7 +304,7 @@ func getParent(e *yang.Entry) *yang.Entry {
 	if e == nil {
 		return nil
 	}
-	if e.Parent != nil && e.Parent.Name == "root" {
+	if e.Parent != nil && e.Parent.Name == RootName {
 		return nil
 	}
 	// if !e.IsChoice() && !e.IsCase() {
