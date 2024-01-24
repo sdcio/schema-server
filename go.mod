@@ -7,17 +7,17 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/iptecharch/sdc-protos v0.0.18
+	github.com/iptecharch/sdc-protos v0.0.19
 	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/openconfig/goyang v1.4.4
+	github.com/openconfig/goyang v1.4.5
 	github.com/prometheus/client_golang v1.17.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/sync v0.5.0
-	google.golang.org/grpc v1.60.0
-	google.golang.org/protobuf v1.31.0
+	golang.org/x/sync v0.6.0
+	google.golang.org/grpc v1.60.1
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v2 v2.4.0
 	sigs.k8s.io/controller-runtime v0.16.3
 )

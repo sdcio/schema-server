@@ -10,9 +10,7 @@ import (
 
 func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 	l := &sdcpb.LeafSchema{
-		Name: e.Name,
-		// Description:    e.Description,
-		Owner:          "",
+		Name:           e.Name,
 		Namespace:      e.Namespace().Name,
 		Type:           toSchemaType(e.Type),
 		IsMandatory:    e.Mandatory.Value(),
@@ -20,6 +18,7 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
+		ChoiceInfo:     getChoiceInfo(e),
 	}
 	if withDesc {
 		l.Description = e.Description

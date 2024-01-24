@@ -7,15 +7,14 @@ import (
 
 func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
 	ll := &sdcpb.LeafListSchema{
-		Name: e.Name,
-		// Description:    e.Description,
-		Owner:          "",
+		Name:           e.Name,
 		Namespace:      e.Namespace().Name,
 		Type:           toSchemaType(e.Type),
 		Units:          e.Units,
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		IsUserOrdered:  false,
+		ChoiceInfo:     getChoiceInfo(e),
 	}
 	if withDesc {
 		ll.Description = e.Description
