@@ -20,6 +20,7 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 		IsState:        isState(e),
 		IsPresence:     isPresence(e),
 		ChoiceInfo:     getChoiceInfo(e),
+		IfFeature:      getIfFeature(e),
 	}
 	if withDesc {
 		c.Description = e.Description
