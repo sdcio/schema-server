@@ -19,6 +19,7 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
 		ChoiceInfo:     getChoiceInfo(e),
+		IfFeature:      getIfFeature(e),
 	}
 	if withDesc {
 		l.Description = e.Description
@@ -94,6 +95,20 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 				ms.Error = m.ErrorMessage.Name
 			}
 			rs = append(rs, ms)
+		}
+	}
+	return rs
+}
+
+func getIfFeature(e *yang.Entry) []string {
+	ifFeatures, ok := e.Extra["if-feature"]
+	if !ok {
+		return nil
+	}
+	rs := make([]string, 0, len(ifFeatures))
+	for _, m := range ifFeatures {
+		if m, ok := m.(*yang.Value); ok {
+			rs = append(rs, m.Name)
 		}
 	}
 	return rs
