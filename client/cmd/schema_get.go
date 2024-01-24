@@ -5,7 +5,9 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/iptecharch/schema-server/pkg/utils"
 	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
@@ -43,7 +45,7 @@ var schemaGetCmd = &cobra.Command{
 			},
 			WithDescription: withDesc,
 		}
-		fmt.Println("request:")
+		fmt.Fprintln(os.Stderr, "request:")
 		fmt.Println(prototext.Format(req))
 		ctx, cancel2 := context.WithTimeout(cmd.Context(), timeout)
 		defer cancel2()
@@ -54,7 +56,15 @@ var schemaGetCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("response:")
+		fmt.Fprintln(os.Stderr, "response:")
+		if format == "json" {
+			b, err := json.MarshalIndent(rsp, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(b))
+			return nil
+		}
 		fmt.Println(prototext.Format(rsp))
 		return nil
 	},

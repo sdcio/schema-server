@@ -10,9 +10,7 @@ import (
 
 func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 	c := &sdcpb.ContainerSchema{
-		Name: e.Name,
-		// Description:    e.Description,
-		Owner:          "", // TODO:
+		Name:           e.Name,
 		Namespace:      e.Namespace().Name,
 		Keys:           []*sdcpb.LeafSchema{},
 		Fields:         []*sdcpb.LeafSchema{},
@@ -21,6 +19,7 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		IsPresence:     isPresence(e),
+		ChoiceInfo:     getChoiceInfo(e),
 	}
 	if withDesc {
 		c.Description = e.Description
@@ -82,4 +81,34 @@ func isPresence(e *yang.Entry) bool {
 		return false
 	}
 	return false
+}
+
+func getChoiceInfo(e *yang.Entry) *sdcpb.ChoiceInfo {
+	if e == nil || e.Parent == nil || e.Parent.Parent == nil {
+		return nil
+	}
+	var choice, cas *yang.Entry
+	if e.Parent.IsCase() {
+		cas = e.Parent
+	}
+	if e.Parent.Parent.IsChoice() {
+		choice = e.Parent.Parent
+	}
+	if choice == nil && cas == nil {
+		return nil
+	}
+	ci := &sdcpb.ChoiceInfo{
+		Choice:  choice.Name,
+		Case:    cas.Name,
+		AltCase: []string{},
+	}
+	for _, ee := range choice.Dir {
+		if !ee.IsCase() {
+			continue
+		}
+		for _, eee := range ee.Dir {
+			ci.AltCase = append(ci.AltCase, strings.Join([]string{ee.Name, eee.Name}, "/"))
+		}
+	}
+	return ci
 }
