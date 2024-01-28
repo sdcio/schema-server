@@ -155,6 +155,7 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 	lpe := len(pe)
 	cpe := &sdcpb.PathElem{
 		Name: e.Name,
+		Key:  make(map[string]string),
 	}
 	if lpe == 0 {
 		p.Elem = append(p.Elem, cpe)
@@ -236,10 +237,14 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		}
 		p.Elem = append(p.Elem, cpe)
 	case e.IsLeafList():
-		if lpe != 1 {
-			return fmt.Errorf("leafList %s - unknown element %v", e.Name, pe[0])
-		}
 		p.Elem = append(p.Elem, cpe)
+		switch lpe {
+		case 1:
+		case 2:
+			cpe.Key[cpe.Name] = pe[1]
+		default:
+			return fmt.Errorf("leafList %s - unknown element %q", e.Name, pe[2])
+		}
 	}
 	return nil
 }
