@@ -416,6 +416,12 @@ OUTER:
 				}
 			case *sdcpb.SchemaElem_Field:
 			case *sdcpb.SchemaElem_Leaflist:
+				name := p.Elem[len(p.GetElem())-1].GetName()
+				if p.Elem[len(p.GetElem())-1].Key == nil {
+					p.Elem[len(p.GetElem())-1].Key = make(map[string]string)
+				}
+				p.Elem[len(p.GetElem())-1].Key[name] = req.PathElement[i+1]
+				i++
 			}
 			//
 			i++
@@ -423,6 +429,16 @@ OUTER:
 	}
 	if numPathElems-1 > i {
 		return nil, fmt.Errorf("unknown PathElement: %s", req.GetPathElement()[i])
+	}
+	// validate final path
+	_, err := s.getSchema(ctx, &sdcpb.GetSchemaRequest{
+		Path:            p,
+		Schema:          req.GetSchema(),
+		ValidateKeys:    false,
+		WithDescription: false,
+	}, sck)
+	if err != nil {
+		return nil, err
 	}
 	return &sdcpb.ToPathResponse{Path: p}, nil
 }
