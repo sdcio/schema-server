@@ -7,9 +7,9 @@ ENV CGO_ENABLED=0 GOOS=linux GOARCH=amd64
 RUN apt-get install --yes --no-install-recommends ca-certificates tzdata
 
 # add unprivileged user
-RUN adduser --shell /usr/sbin/nologin --uid 1000 --disabled-login --no-create-home --gecos '' app \
+RUN adduser --shell /bin/false --uid $USERID --disabled-login --home /app/ --no-create-home --gecos '' app \
     && sed -i -r "/^(app|root)/!d" /etc/group /etc/passwd \
-    && sed -i -r 's#^(.*):[^:]*$#\1:/usr/sbin/nologin#' /etc/passwd
+    && sed -i -r 's#^(.*):[^:]*$#\1:/bin/false#' /etc/passwd
 RUN mkdir -p /schemas
 #
 
@@ -17,8 +17,6 @@ FROM scratch
 ARG UID=10000
 # add-in our timezone data file
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
-# add-in our nologin binary
-COPY --from=builder /usr/sbin/nologin /usr/sbin/nologin
 # add-in our unprivileged user
 COPY --from=builder /etc/passwd /etc/group /etc/shadow /etc/
 # add-in our ca certificates
