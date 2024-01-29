@@ -407,6 +407,7 @@ OUTER:
 			switch rsp.GetSchema().Schema.(type) {
 			case *sdcpb.SchemaElem_Container:
 				p.Elem[len(p.GetElem())-1].Key = make(map[string]string, len(rsp.GetSchema().GetContainer().GetKeys()))
+				// assumes keys are sorted by name
 				for _, schemaKey := range rsp.GetSchema().GetContainer().GetKeys() {
 					p.Elem[len(p.GetElem())-1].Key[schemaKey.GetName()] = req.GetPathElement()[i+1]
 					i++
@@ -428,7 +429,7 @@ OUTER:
 		}
 	}
 	if numPathElems-1 > i {
-		return nil, fmt.Errorf("unknown PathElement: %s", req.GetPathElement()[i])
+		return nil, fmt.Errorf("unknown PathElement(s): %s", req.GetPathElement()[i:])
 	}
 	// validate final path
 	_, err := s.getSchema(ctx, &sdcpb.GetSchemaRequest{
@@ -724,8 +725,8 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 	var err error
 	sce := new(sdcpb.SchemaElem)
 
-	switch len(pes) {
-	case 0: // key all i.e "root"
+	// key all i.e "root"
+	if lpes := len(pes); lpes == 0 || (lpes == 1 && pes[0] == "") {
 		err = s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
@@ -749,7 +750,6 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 			return nil, err
 		}
 		return &sdcpb.GetSchemaResponse{Schema: sce}, nil
-	default:
 	}
 	moduleName := ""
 	if index := strings.Index(pes[0], ":"); index > 0 {

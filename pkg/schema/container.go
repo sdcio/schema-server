@@ -59,6 +59,9 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 		}
 	}
 	sort.Strings(c.Children)
+	sort.Slice(c.Keys, func(i, j int) bool {
+		return c.Keys[i].GetName() < c.Keys[j].GetName()
+	})
 	return c
 }
 
