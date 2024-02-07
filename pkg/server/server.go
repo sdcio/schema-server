@@ -25,20 +25,20 @@ import (
 	"github.com/gorilla/mux"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Install the gzip compressor
 
-	"github.com/iptecharch/schema-server/pkg/config"
-	"github.com/iptecharch/schema-server/pkg/schema"
-	"github.com/iptecharch/schema-server/pkg/store"
-	"github.com/iptecharch/schema-server/pkg/store/memstore"
-	"github.com/iptecharch/schema-server/pkg/store/persiststore"
+	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/schema"
+	"github.com/sdcio/schema-server/pkg/store"
+	"github.com/sdcio/schema-server/pkg/store/memstore"
+	"github.com/sdcio/schema-server/pkg/store/persiststore"
 )
 
 type Server struct {

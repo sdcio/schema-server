@@ -26,8 +26,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 
-	"github.com/iptecharch/schema-server/pkg/config"
-	"github.com/iptecharch/schema-server/pkg/server"
+	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/server"
 )
 
 var version = "dev"
