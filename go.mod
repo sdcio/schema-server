@@ -1,4 +1,4 @@
-module github.com/iptecharch/schema-server
+module github.com/sdcio/schema-server
 
 go 1.21.4
 
@@ -7,12 +7,12 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/iptecharch/sdc-protos v0.0.20
 	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/openconfig/goyang v1.4.5
 	github.com/prometheus/client_golang v1.17.0
+	github.com/sdcio/sdc-protos v0.0.22
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/sync v0.6.0

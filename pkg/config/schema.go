@@ -18,7 +18,7 @@ import (
 	"errors"
 	"time"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
 const (

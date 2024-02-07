@@ -18,7 +18,7 @@ topology:
   nodes:
     schema-server:
       kind: linux
-      image: registry.kmrd.dev/iptecharch/schema-server:latest
+      image: registry.kmrd.dev/sdcio/schema-server:latest
       binds:
         - "./schema-server.yaml:/app/schema-server.yaml"
         - "../common/yang:/app/yang"

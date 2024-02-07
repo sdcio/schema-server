@@ -17,11 +17,11 @@ package schema
 import (
 	"strings"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/iptecharch/schema-server/pkg/utils"
+	"github.com/sdcio/schema-server/pkg/utils"
 )
 
 func (sc *Schema) buildReferencesAnnotation() error {

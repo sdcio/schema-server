@@ -19,16 +19,16 @@ import (
 	"sort"
 	"sync"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iptecharch/schema-server/pkg/config"
-	"github.com/iptecharch/schema-server/pkg/schema"
-	"github.com/iptecharch/schema-server/pkg/store"
-	"github.com/iptecharch/schema-server/pkg/utils"
+	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/schema"
+	"github.com/sdcio/schema-server/pkg/store"
+	"github.com/sdcio/schema-server/pkg/utils"
 )
 
 type memStore struct {

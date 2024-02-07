@@ -15,8 +15,8 @@
 package schema
 
 import (
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
 func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {

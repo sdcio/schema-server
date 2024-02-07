@@ -19,10 +19,10 @@ import (
 	"sort"
 	"testing"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 
-	"github.com/iptecharch/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/config"
 )
 
 func TestSchema_BuildPath(t *testing.T) {

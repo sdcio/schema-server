@@ -17,9 +17,9 @@ package store
 import (
 	"context"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 
-	"github.com/iptecharch/schema-server/pkg/schema"
+	"github.com/sdcio/schema-server/pkg/schema"
 )
 
 type SchemaKey struct {
