@@ -1,3 +1,17 @@
+// Copyright 2024 Nokia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package server
 
 import (
@@ -11,20 +25,20 @@ import (
 	"github.com/gorilla/mux"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Install the gzip compressor
 
-	"github.com/iptecharch/schema-server/pkg/config"
-	"github.com/iptecharch/schema-server/pkg/schema"
-	"github.com/iptecharch/schema-server/pkg/store"
-	"github.com/iptecharch/schema-server/pkg/store/memstore"
-	"github.com/iptecharch/schema-server/pkg/store/persiststore"
+	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/schema"
+	"github.com/sdcio/schema-server/pkg/store"
+	"github.com/sdcio/schema-server/pkg/store/memstore"
+	"github.com/sdcio/schema-server/pkg/store/persiststore"
 )
 
 type Server struct {

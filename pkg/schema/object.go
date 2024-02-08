@@ -1,3 +1,17 @@
+// Copyright 2024 Nokia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package schema
 
 import (
@@ -6,8 +20,8 @@ import (
 	"sort"
 	"strings"
 
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -155,6 +169,7 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 	lpe := len(pe)
 	cpe := &sdcpb.PathElem{
 		Name: e.Name,
+		Key:  make(map[string]string),
 	}
 	if lpe == 0 {
 		p.Elem = append(p.Elem, cpe)
@@ -236,10 +251,14 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		}
 		p.Elem = append(p.Elem, cpe)
 	case e.IsLeafList():
-		if lpe != 1 {
-			return fmt.Errorf("leafList %s - unknown element %v", e.Name, pe[0])
-		}
 		p.Elem = append(p.Elem, cpe)
+		switch lpe {
+		case 1:
+		case 2:
+			cpe.Key[cpe.Name] = pe[1]
+		default:
+			return fmt.Errorf("leafList %s - unknown element %q", e.Name, pe[2])
+		}
 	}
 	return nil
 }

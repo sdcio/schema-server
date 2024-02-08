@@ -1,3 +1,17 @@
+// Copyright 2024 Nokia
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package persiststore
 
 import (
@@ -11,18 +25,18 @@ import (
 
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/dgraph-io/badger/v4/options"
-	sdcpb "github.com/iptecharch/sdc-protos/sdcpb"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/openconfig/goyang/pkg/yang"
+	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/iptecharch/schema-server/pkg/config"
-	"github.com/iptecharch/schema-server/pkg/schema"
-	"github.com/iptecharch/schema-server/pkg/store"
-	"github.com/iptecharch/schema-server/pkg/utils"
+	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/schema"
+	"github.com/sdcio/schema-server/pkg/store"
+	"github.com/sdcio/schema-server/pkg/utils"
 )
 
 const (
@@ -407,6 +421,7 @@ OUTER:
 			switch rsp.GetSchema().Schema.(type) {
 			case *sdcpb.SchemaElem_Container:
 				p.Elem[len(p.GetElem())-1].Key = make(map[string]string, len(rsp.GetSchema().GetContainer().GetKeys()))
+				// assumes keys are sorted by name
 				for _, schemaKey := range rsp.GetSchema().GetContainer().GetKeys() {
 					p.Elem[len(p.GetElem())-1].Key[schemaKey.GetName()] = req.GetPathElement()[i+1]
 					i++
@@ -416,13 +431,29 @@ OUTER:
 				}
 			case *sdcpb.SchemaElem_Field:
 			case *sdcpb.SchemaElem_Leaflist:
+				name := p.Elem[len(p.GetElem())-1].GetName()
+				if p.Elem[len(p.GetElem())-1].Key == nil {
+					p.Elem[len(p.GetElem())-1].Key = make(map[string]string)
+				}
+				p.Elem[len(p.GetElem())-1].Key[name] = req.PathElement[i+1]
+				i++
 			}
 			//
 			i++
 		}
 	}
 	if numPathElems-1 > i {
-		return nil, fmt.Errorf("unknown PathElement: %s", req.GetPathElement()[i])
+		return nil, fmt.Errorf("unknown PathElement(s): %s", req.GetPathElement()[i:])
+	}
+	// validate final path
+	_, err := s.getSchema(ctx, &sdcpb.GetSchemaRequest{
+		Path:            p,
+		Schema:          req.GetSchema(),
+		ValidateKeys:    false,
+		WithDescription: false,
+	}, sck)
+	if err != nil {
+		return nil, err
 	}
 	return &sdcpb.ToPathResponse{Path: p}, nil
 }
@@ -708,8 +739,8 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 	var err error
 	sce := new(sdcpb.SchemaElem)
 
-	switch len(pes) {
-	case 0: // key all i.e "root"
+	// key all i.e "root"
+	if lpes := len(pes); lpes == 0 || (lpes == 1 && pes[0] == "") {
 		err = s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
@@ -733,7 +764,6 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 			return nil, err
 		}
 		return &sdcpb.GetSchemaResponse{Schema: sce}, nil
-	default:
 	}
 	moduleName := ""
 	if index := strings.Index(pes[0], ":"); index > 0 {
