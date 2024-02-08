@@ -81,6 +81,6 @@ changelog:
       - "^test:"
 release:
   prerelease: auto
-  draft: true
+  draft: false
   replace_existing_draft: true
   disable: false
