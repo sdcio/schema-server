@@ -102,8 +102,10 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 	rs := make([]*sdcpb.MustStatement, 0, len(mustStatements))
 	for _, m := range mustStatements {
 		if m, ok := m.(*yang.Must); ok {
+			// newlines might appear in the yang file, replace them with space
+			stmt := strings.ReplaceAll(m.Name, "\n", " ")
 			ms := &sdcpb.MustStatement{
-				Statement: m.Name,
+				Statement: stmt,
 			}
 			if m.ErrorMessage != nil {
 				ms.Error = m.ErrorMessage.Name
