@@ -28,7 +28,6 @@ func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		IsUserOrdered:  false,
-		ChoiceInfo:     getChoiceInfo(e),
 		IfFeature:      getIfFeature(e),
 	}
 	if withDesc {

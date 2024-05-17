@@ -32,7 +32,6 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
-		ChoiceInfo:     getChoiceInfo(e),
 		IfFeature:      getIfFeature(e),
 	}
 	if withDesc {

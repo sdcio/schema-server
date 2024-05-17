@@ -24,17 +24,18 @@ import (
 
 func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 	c := &sdcpb.ContainerSchema{
-		Name:           e.Name,
-		Namespace:      e.Namespace().Name,
-		Keys:           []*sdcpb.LeafSchema{},
-		Fields:         []*sdcpb.LeafSchema{},
-		Leaflists:      []*sdcpb.LeafListSchema{},
-		Children:       []string{},
-		MustStatements: getMustStatement(e),
-		IsState:        isState(e),
-		IsPresence:     isPresence(e),
-		ChoiceInfo:     getChoiceInfo(e),
-		IfFeature:      getIfFeature(e),
+		Name:              e.Name,
+		Namespace:         e.Namespace().Name,
+		Keys:              []*sdcpb.LeafSchema{},
+		Fields:            []*sdcpb.LeafSchema{},
+		Leaflists:         []*sdcpb.LeafListSchema{},
+		Children:          []string{},
+		MandatoryChildren: getMandatoryChildren(e),
+		MustStatements:    getMustStatement(e),
+		IsState:           isState(e),
+		IsPresence:        isPresence(e),
+		ChoiceInfo:        getChoiceInfo(e),
+		IfFeature:         getIfFeature(e),
 	}
 	if withDesc {
 		c.Description = e.Description
@@ -79,6 +80,16 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 	return c
 }
 
+func getMandatoryChildren(e *yang.Entry) []string {
+	result := []string{}
+	for k, v := range e.Dir {
+		if v.Mandatory == yang.TSTrue {
+			result = append(result, k)
+		}
+	}
+	return result
+}
+
 func isState(e *yang.Entry) bool {
 	if e.Config == yang.TSFalse {
 		return true
@@ -102,31 +113,43 @@ func isPresence(e *yang.Entry) bool {
 }
 
 func getChoiceInfo(e *yang.Entry) *sdcpb.ChoiceInfo {
-	if e == nil || e.Parent == nil || e.Parent.Parent == nil {
+	if e == nil {
 		return nil
 	}
-	var choice, cas *yang.Entry
-	if e.Parent.IsCase() {
-		cas = e.Parent
-	}
-	if e.Parent.Parent.IsChoice() {
-		choice = e.Parent.Parent
-	}
-	if choice == nil && cas == nil {
-		return nil
-	}
-	ci := &sdcpb.ChoiceInfo{
-		Choice:  choice.Name,
-		Case:    cas.Name,
-		AltCase: []string{},
-	}
-	for _, ee := range choice.Dir {
-		if !ee.IsCase() {
+
+	var ci *sdcpb.ChoiceInfo
+
+	// go through child entries
+	for _, de := range e.Dir {
+		// continue if it is not a choice
+		if !de.IsChoice() {
 			continue
 		}
-		for _, eee := range ee.Dir {
-			ci.AltCase = append(ci.AltCase, strings.Join([]string{ee.Name, eee.Name}, "/"))
+
+		// init the return struct if still nil
+		if ci == nil {
+			// create ChoiceInfo return struct
+			ci = &sdcpb.ChoiceInfo{
+				Choice: map[string]*sdcpb.ChoiceInfoChoice{},
+			}
 		}
+
+		processChoice(de, ci)
 	}
 	return ci
+}
+
+func processChoice(e *yang.Entry, ci *sdcpb.ChoiceInfo) {
+	ci.Choice[e.Name] = &sdcpb.ChoiceInfoChoice{
+		Case: map[string]*sdcpb.ChoiceCase{},
+	}
+
+	for childName, cases := range e.Dir {
+		actualCase := &sdcpb.ChoiceCase{}
+		ci.Choice[e.Name].Case[childName] = actualCase
+
+		for caseElementName := range cases.Dir {
+			actualCase.Elements = append(actualCase.Elements, caseElementName)
+		}
+	}
 }

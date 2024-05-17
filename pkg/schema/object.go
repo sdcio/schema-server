@@ -70,6 +70,7 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		return getEntry(e, pe[offset:])
 	}
 	// skip first level modules and try their children
+	// TODO: performance ... implement map for lookups
 	for _, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
 			return getEntry(cc, pe[offset:])
@@ -92,12 +93,12 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 			if ee := e.Dir[e.Name]; ee != nil {
 				return ee, nil
 			}
-		case e.IsContainer():
-			if ee := e.Dir[e.Name]; ee != nil {
-				if ee.IsCase() || ee.IsChoice() {
-					return ee, nil
-				}
-			}
+			// case e.IsContainer():
+			// 	if ee := e.Dir[e.Name]; ee != nil {
+			// 		if ee.IsCase() || ee.IsChoice() {
+			// 			return ee, nil
+			// 		}
+			// 	}
 		}
 		return e, nil
 	default:
