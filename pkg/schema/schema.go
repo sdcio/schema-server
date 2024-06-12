@@ -20,9 +20,8 @@ import (
 	"time"
 
 	"github.com/openconfig/goyang/pkg/yang"
-	log "github.com/sirupsen/logrus"
-
 	"github.com/sdcio/schema-server/pkg/config"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

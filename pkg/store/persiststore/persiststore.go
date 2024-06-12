@@ -414,6 +414,7 @@ OUTER:
 			if err != nil {
 				return nil, err
 			}
+
 			switch rsp.GetSchema().Schema.(type) {
 			case *sdcpb.SchemaElem_Container:
 				p.Elem[len(p.GetElem())-1].Key = make(map[string]string, len(rsp.GetSchema().GetContainer().GetKeys()))
