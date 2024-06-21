@@ -52,6 +52,11 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	if len(pe) == 0 {
 		return sc.root, nil
 	}
+	// TODO: code needs to be refactored.
+	// Following piece of code takes both normalized paths or module-prepended paths as input.
+	// for example:
+	//   []string{"srl_nokia-if:interface", "srl_nokia-if:name"}
+	//   []string{"interface", "name"}
 	first := pe[0]
 	offset := 1
 	index := strings.Index(pe[0], ":")
@@ -63,12 +68,18 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 
 	sc.m.RLock()
 	defer sc.m.RUnlock()
-	if e, ok := sc.root.Dir[first]; ok {
-		if e == nil {
-			return nil, fmt.Errorf("module %q not found", first)
+	// In case the YANG module name is the same as the first top-level container,
+	// we need to make sure to lookup the module only when the module is defined in the path
+	if index > 0 {
+		if e, ok := sc.root.Dir[first]; ok {
+			if e == nil {
+				return nil, fmt.Errorf("module %q not found", first)
+			}
+			return getEntry(e, pe[offset:])
 		}
-		return getEntry(e, pe[offset:])
 	}
+	// In case no module has been defined in the path, we try all modules and match the first element
+	// in the children of each module.
 	// skip first level modules and try their children
 	// TODO: performance ... implement map for lookups
 	for _, child := range sc.root.Dir {
