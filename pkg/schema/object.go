@@ -81,6 +81,7 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	// In case no module has been defined in the path, we try all modules and match the first element
 	// in the children of each module.
 	// skip first level modules and try their children
+	// TODO: performance ... implement map for lookups
 	for _, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
 			return getEntry(cc, pe[offset:])
@@ -103,12 +104,12 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 			if ee := e.Dir[e.Name]; ee != nil {
 				return ee, nil
 			}
-		case e.IsContainer():
-			if ee := e.Dir[e.Name]; ee != nil {
-				if ee.IsCase() || ee.IsChoice() {
-					return ee, nil
-				}
-			}
+			// case e.IsContainer():
+			// 	if ee := e.Dir[e.Name]; ee != nil {
+			// 		if ee.IsCase() || ee.IsChoice() {
+			// 			return ee, nil
+			// 		}
+			// 	}
 		}
 		return e, nil
 	default:
@@ -165,7 +166,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 		}
 	}
 
-	return nil
+	return fmt.Errorf("path %v does not exist in schema %s.", pe, sc.config.GetSchema().String())
 }
 
 func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {

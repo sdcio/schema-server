@@ -32,7 +32,6 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
-		ChoiceInfo:     getChoiceInfo(e),
 		IfFeature:      getIfFeature(e),
 	}
 	if withDesc {
@@ -102,8 +101,10 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 	rs := make([]*sdcpb.MustStatement, 0, len(mustStatements))
 	for _, m := range mustStatements {
 		if m, ok := m.(*yang.Must); ok {
+			// newlines might appear in the yang file, replace them with space
+			stmt := strings.ReplaceAll(m.Name, "\n", " ")
 			ms := &sdcpb.MustStatement{
-				Statement: m.Name,
+				Statement: stmt,
 			}
 			if m.ErrorMessage != nil {
 				ms.Error = m.ErrorMessage.Name

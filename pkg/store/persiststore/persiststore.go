@@ -388,10 +388,6 @@ func (s *persistStore) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*s
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
 	numPathElems := len(req.GetPathElement())
-	if numPathElems == 0 {
-		return nil, status.Error(codes.InvalidArgument, "missing path")
-	}
-	//
 	p := &sdcpb.Path{
 		Elem: make([]*sdcpb.PathElem, 0, numPathElems),
 	}
@@ -418,6 +414,7 @@ OUTER:
 			if err != nil {
 				return nil, err
 			}
+
 			switch rsp.GetSchema().Schema.(type) {
 			case *sdcpb.SchemaElem_Container:
 				p.Elem[len(p.GetElem())-1].Key = make(map[string]string, len(rsp.GetSchema().GetContainer().GetKeys()))
