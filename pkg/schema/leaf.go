@@ -63,10 +63,11 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 	if yt.Enum != nil {
 		values = yt.Enum.Names()
 	}
+
 	slt := &sdcpb.SchemaLeafType{
 		Type:       yang.TypeKind(yt.Kind).String(),
 		Range:      yt.Range.String(),
-		Length:     yt.Length.String(),
+		Length:     []*sdcpb.SchemaLengthType{},
 		Values:     values,
 		Units:      yt.Units,
 		TypeName:   yt.Name,
@@ -74,6 +75,10 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		Patterns:   []*sdcpb.SchemaPattern{},
 		UnionTypes: []*sdcpb.SchemaLeafType{},
 	}
+	for _, l := range yt.Length {
+		slt.Length = append(slt.Length, &sdcpb.SchemaLengthType{Min: l.Min.Value, Max: l.Max.Value})
+	}
+
 	for _, pat := range yt.Pattern {
 		slt.Patterns = append(slt.Patterns, &sdcpb.SchemaPattern{
 			Pattern:  pat,
