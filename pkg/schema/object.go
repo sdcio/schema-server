@@ -81,10 +81,13 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	// In case no module has been defined in the path, we try all modules and match the first element
 	// in the children of each module.
 	// skip first level modules and try their children
-	// TODO: performance ... implement map for lookups
 	for _, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
 			return getEntry(cc, pe[offset:])
+		}
+		// if no child of a submodule was found, try to return the module
+		if child.Name == first {
+			return child, nil
 		}
 	}
 	return nil, fmt.Errorf("entry %q not found", pe[0])
