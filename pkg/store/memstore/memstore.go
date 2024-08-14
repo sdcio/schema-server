@@ -305,7 +305,6 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		var err error
 		for {
 			select {
 			case <-ctx.Done():
@@ -315,10 +314,6 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 					return
 				}
 				sch <- schema.SchemaElemFromYEntry(e, req.GetWithDescription())
-				if err != nil {
-					log.Errorf("%v", err)
-					return
-				}
 			}
 		}
 	}()

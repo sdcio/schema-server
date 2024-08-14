@@ -90,6 +90,11 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 			return child, nil
 		}
 	}
+
+	if cc, ok := sc.root.Dir[first]; ok {
+		return getEntry(cc, pe[offset:])
+	}
+
 	return nil, fmt.Errorf("entry %q not found", pe[0])
 }
 

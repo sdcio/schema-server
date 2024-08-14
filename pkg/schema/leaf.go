@@ -63,10 +63,11 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 	if yt.Enum != nil {
 		values = yt.Enum.Names()
 	}
+
 	slt := &sdcpb.SchemaLeafType{
 		Type:       yang.TypeKind(yt.Kind).String(),
-		Range:      yt.Range.String(),
-		Length:     yt.Length.String(),
+		Range:      []*sdcpb.SchemaMinMaxType{},
+		Length:     []*sdcpb.SchemaMinMaxType{},
 		Values:     values,
 		Units:      yt.Units,
 		TypeName:   yt.Name,
@@ -74,6 +75,14 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		Patterns:   []*sdcpb.SchemaPattern{},
 		UnionTypes: []*sdcpb.SchemaLeafType{},
 	}
+	for _, l := range yt.Length {
+		slt.Length = append(slt.Length, yRangeToSchemaMinMaxType(&l))
+	}
+
+	for _, r := range yt.Range {
+		slt.Range = append(slt.Range, yRangeToSchemaMinMaxType(&r))
+	}
+
 	for _, pat := range yt.Pattern {
 		slt.Patterns = append(slt.Patterns, &sdcpb.SchemaPattern{
 			Pattern:  pat,
@@ -91,6 +100,10 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		}
 	}
 	return slt
+}
+
+func yRangeToSchemaMinMaxType(r *yang.YRange) *sdcpb.SchemaMinMaxType {
+	return &sdcpb.SchemaMinMaxType{Min: &sdcpb.Number{Value: r.Min.Value, Negative: r.Min.Negative}, Max: &sdcpb.Number{Value: r.Max.Value, Negative: r.Max.Negative}}
 }
 
 func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
