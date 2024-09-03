@@ -75,6 +75,7 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		Patterns:   []*sdcpb.SchemaPattern{},
 		UnionTypes: []*sdcpb.SchemaLeafType{},
 	}
+
 	for _, l := range yt.Length {
 		slt.Length = append(slt.Length, yRangeToSchemaMinMaxType(&l))
 	}

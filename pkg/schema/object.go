@@ -174,7 +174,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 		}
 	}
 
-	return fmt.Errorf("path %v does not exist in schema %s.", pe, sc.config.GetSchema().String())
+	return fmt.Errorf("path %v does not exist in schema %s", pe, sc.config.GetSchema().String())
 }
 
 func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
