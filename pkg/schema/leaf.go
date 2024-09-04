@@ -34,6 +34,7 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		Reference:      make([]string, 0),
 		IfFeature:      getIfFeature(e),
 	}
+
 	if withDesc {
 		l.Description = e.Description
 	}
@@ -74,6 +75,10 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		Leafref:    yt.Path,
 		Patterns:   []*sdcpb.SchemaPattern{},
 		UnionTypes: []*sdcpb.SchemaLeafType{},
+	}
+
+	if yt.Kind == yang.Yidentityref {
+		slt.IdentityPrefix = yang.RootNode(yt.IdentityBase).GetPrefix()
 	}
 
 	for _, l := range yt.Length {
