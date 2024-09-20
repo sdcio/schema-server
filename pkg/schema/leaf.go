@@ -77,10 +77,6 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		UnionTypes: []*sdcpb.SchemaLeafType{},
 	}
 
-	if yt.Kind == yang.Yidentityref {
-		slt.IdentityPrefix = yang.RootNode(yt.IdentityBase).GetPrefix()
-	}
-
 	for _, l := range yt.Length {
 		slt.Length = append(slt.Length, yRangeToSchemaMinMaxType(&l))
 	}
@@ -100,7 +96,21 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 			slt.UnionTypes = append(slt.UnionTypes, toSchemaType(ytt))
 		}
 	}
-	if yang.TypeKind(yt.Kind) == yang.Yidentityref {
+	if yt.Kind == yang.Yidentityref {
+
+		if yt.IdentityBase == nil {
+			panic("expected identityref type to have IdentityBase")
+		}
+
+		slt.PossibleIdentities = make(map[string]*sdcpb.SchemaLeafTypePossibleIdentities, len(yt.IdentityBase.Values))
+		for _, identity := range yt.IdentityBase.Values {
+			identityRoot := yang.RootNode(identity)
+			slt.PossibleIdentities[identity.Name] = &sdcpb.SchemaLeafTypePossibleIdentities{
+				Prefix: identityRoot.GetPrefix(),
+				Name:   identity.Name,
+			}
+		}
+
 		for _, idBase := range yt.IdentityBase.Values {
 			slt.Values = append(slt.Values, idBase.Name)
 		}

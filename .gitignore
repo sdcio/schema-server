@@ -15,3 +15,5 @@ tests/results
 dist/
 schema-store
 schema-dir
+.DS_Store
+.idea
