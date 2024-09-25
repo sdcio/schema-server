@@ -60,25 +60,21 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 }
 
 func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
-	var values []string
+	var enumNames []string
 	if yt.Enum != nil {
-		values = yt.Enum.Names()
+		enumNames = yt.Enum.Names()
 	}
 
 	slt := &sdcpb.SchemaLeafType{
-		Type:       yang.TypeKind(yt.Kind).String(),
+		Type:       yt.Kind.String(),
 		Range:      []*sdcpb.SchemaMinMaxType{},
 		Length:     []*sdcpb.SchemaMinMaxType{},
-		Values:     values,
+		EnumNames:  enumNames,
 		Units:      yt.Units,
 		TypeName:   yt.Name,
 		Leafref:    yt.Path,
 		Patterns:   []*sdcpb.SchemaPattern{},
 		UnionTypes: []*sdcpb.SchemaLeafType{},
-	}
-
-	if yt.Kind == yang.Yidentityref {
-		slt.IdentityPrefix = yang.RootNode(yt.IdentityBase).GetPrefix()
 	}
 
 	for _, l := range yt.Length {
@@ -95,16 +91,24 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 			Inverted: false,
 		})
 	}
-	if yang.TypeKind(yt.Kind) == yang.Yunion {
+	if yt.Kind == yang.Yunion {
 		for _, ytt := range yt.Type {
 			slt.UnionTypes = append(slt.UnionTypes, toSchemaType(ytt))
 		}
 	}
-	if yang.TypeKind(yt.Kind) == yang.Yidentityref {
-		for _, idBase := range yt.IdentityBase.Values {
-			slt.Values = append(slt.Values, idBase.Name)
+	if yt.Kind == yang.Yidentityref {
+
+		if yt.IdentityBase == nil {
+			panic("expected identityref type to have IdentityBase")
+		}
+
+		slt.IdentityPrefixesMap = make(map[string]string, len(yt.IdentityBase.Values))
+		for _, identity := range yt.IdentityBase.Values {
+			identityRoot := yang.RootNode(identity)
+			slt.IdentityPrefixesMap[identity.Name] = identityRoot.GetPrefix()
 		}
 	}
+
 	return slt
 }
 
