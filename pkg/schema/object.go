@@ -251,8 +251,16 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		return sc.buildPath(pe[count:], p, ee)
 	case e.IsChoice():
 		p.Elem = append(p.Elem, cpe)
-		if ee, ok := e.Dir[pe[0]]; ok {
-			return sc.buildPath(pe[1:], p, ee)
+		for _, entry := range e.Dir {
+			if entry.IsCase() {
+				if ee, ok := entry.Dir[pe[0]]; ok {
+					return sc.buildPath(pe[1:], p, ee)
+				}
+			} else {
+				if ee, ok := e.Dir[pe[0]]; ok {
+					return sc.buildPath(pe[1:], p, ee)
+				}
+			}
 		}
 		return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
 	case e.IsCase():
