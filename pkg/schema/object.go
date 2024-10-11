@@ -69,57 +69,80 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	// for example:
 	//   []string{"srl_nokia-if:interface", "srl_nokia-if:name"}
 	//   []string{"interface", "name"}
-	first := pe[0]
-	offset := 1
-	index := strings.Index(pe[0], ":")
-	if index > 0 {
-		first = pe[0][:index]
-		pe[0] = pe[0][index+1:]
-		offset = 0
-	}
 
 	sc.m.RLock()
 	defer sc.m.RUnlock()
-	// In case the YANG module name is the same as the first top-level container,
-	// we need to make sure to lookup the module only when the module is defined in the path
-	if index > 0 {
-		if e, ok := sc.root.Dir[first]; ok {
-			if e == nil {
-				return nil, fmt.Errorf("module %q not found", first)
-			}
-			return getEntry(e, pe[offset:])
-		}
+
+	// Assume we are always dealing with an absolute path here?
+	mod, err := sc.FindModuleForPathElement(sc.root, pe[0])
+	if err != nil {
+		return nil, err
 	}
 
-	// fmt.Printf("New Seach %s\n", first)
-	// for _, child := range sc.root.Dir {
-	// 	if cc, ok := child.Dir[first]; ok {
-	// 		fmt.Printf("Found %s, Model: %s\n", cc.Name, yang.RootNode(child.Node).Name)
-	// 	}
-	// }
+	// do we only have the module name in that path? If so we are done
+	prefix, path, found := strings.Cut(pe[0], ":")
+	if !found {
+		path = prefix
+		prefix = ""
+	}
+	if mod.Name == path && len(pe) == 1 {
+		return mod, nil
+	}
 
-	// In case no module has been defined in the path, we try all modules and match the first element
-	// in the children of each module.
-	// skip first level modules and try their children
-	for name, child := range sc.root.Dir {
-		if cc, ok := child.Dir[first]; ok {
-			entry, err := getEntry(cc, pe[offset:])
-			if err == nil {
+	return getEntry(mod, pe)
+}
+
+func (sc *Schema) FindModuleForPathElement(e *yang.Entry, pathElement string) (*yang.Entry, error) {
+	if e == nil {
+		return nil, errors.New("nil yang entry")
+	}
+
+	prefix, path, foundPrefix := strings.Cut(pathElement, ":")
+	if !foundPrefix {
+		path = prefix
+		prefix = ""
+	}
+	// try to shortcut by returning the module if it exists
+	if mod, ok := e.Dir[path]; ok && (!foundPrefix || mod.Prefix.Name == prefix) {
+		return mod, nil
+	}
+
+	switch {
+	case e.Node == nil && e.Name != RootName:
+		return nil, fmt.Errorf("entry has no Node but is not root, instead is %s", e.Name)
+	case e.Node == nil:
+		for _, entry := range sc.root.Dir {
+			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
 				return entry, nil
 			}
-			log.Debugf("looking up path %s in module %s caused: %v. continuing anyways", strings.Join(pe, "/"), name, err)
 		}
-		// if no child of a submodule was found, try to return the module
-		if child.Name == first {
-			return child, nil
+		return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
+
+	default:
+		mod := yang.RootNode(e.Node)
+		if prefix == mod.GetPrefix() {
+			foundEntry, ok := sc.root.Dir[mod.Name]
+			if !ok {
+				return nil, fmt.Errorf("module %q not found in loaded modules", mod.Name)
+			}
+			if _, ok := foundEntry.Dir[path]; ok {
+				return foundEntry, nil
+			}
+		}
+
+		for _, i := range mod.Import {
+			if prefix == i.Prefix.Name {
+				foundEntry, ok := sc.root.Dir[i.Name]
+				if !ok {
+					return nil, fmt.Errorf("module %q not found in loaded modules", i.Name)
+				}
+				if _, ok := foundEntry.Dir[path]; ok {
+					return foundEntry, nil
+				}
+			}
 		}
 	}
-
-	if cc, ok := sc.root.Dir[first]; ok {
-		return getEntry(cc, pe[offset:])
-	}
-
-	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
+	return nil, fmt.Errorf("error getting Element for pathElement %q", pathElement)
 }
 
 func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
@@ -150,7 +173,11 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 		}
 		for _, ee := range getChildren(e) {
 			// fmt.Printf("entry %s, child %s | %s\n", e.Name, ee.Name, pe)
-			if ee.Name != pe[0] {
+
+			// prefix will be in [0] if exists, so path will always be in last index
+			// compare name without prefix
+			pathElements := strings.SplitN(pe[0], ":", 2)
+			if ee.Name != pathElements[len(pathElements)-1] {
 				continue
 			}
 			return getEntry(ee, pe[1:])
