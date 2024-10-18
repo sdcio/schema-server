@@ -43,6 +43,10 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 	}
 	if e.Prefix != nil {
 		l.Prefix = e.Prefix.Name
+		mod := yang.FindModuleByPrefix(e.Node, e.Prefix.Name)
+		if mod != nil {
+			l.ModuleName = mod.Name
+		}
 	}
 	for k, v := range e.Annotation {
 		// fmt.Println("annotation:", k)

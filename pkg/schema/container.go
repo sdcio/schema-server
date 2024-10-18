@@ -49,6 +49,10 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.ContainerSchema {
 	}
 	if e.Prefix != nil {
 		c.Prefix = e.Prefix.Name
+		mod := yang.FindModuleByPrefix(e.Node, e.Prefix.Name)
+		if mod != nil {
+			c.ModuleName = mod.Name
+		}
 	}
 
 	keys := map[string]struct{}{}
