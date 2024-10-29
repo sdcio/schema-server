@@ -107,9 +107,11 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 		}
 
 		slt.IdentityPrefixesMap = make(map[string]string, len(yt.IdentityBase.Values))
+		slt.ModulePrefixMap = make(map[string]string, len(yt.IdentityBase.Values))
 		for _, identity := range yt.IdentityBase.Values {
 			identityRoot := yang.RootNode(identity)
 			slt.IdentityPrefixesMap[identity.Name] = identityRoot.GetPrefix()
+			slt.ModulePrefixMap[identity.Name] = identityRoot.NName()
 		}
 	}
 
