@@ -132,7 +132,7 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 			return getEntry(ee, pe[1:])
 		}
 		// fmt.Println("entry name", e.Name, pe)
-		return nil, fmt.Errorf("%q not found", pe[0])
+		return nil, fmt.Errorf("%q not a child entry of %v", pe[0], e.Name)
 	}
 }
 

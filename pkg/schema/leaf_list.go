@@ -41,8 +41,14 @@ func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
 			ll.IsUserOrdered = e.ListAttr.OrderedBy.Name == "user"
 		}
 	}
+
 	if e.Prefix != nil {
 		ll.Prefix = e.Prefix.Name
+		mod := yang.FindModuleByPrefix(e.Node, e.Prefix.Name)
+		if mod != nil {
+			ll.ModuleName = mod.Name
+		}
 	}
+
 	return ll
 }
