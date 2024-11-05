@@ -22,11 +22,16 @@ import (
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
-func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
+func leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchema, error) {
+	entryType, err := toSchemaType(e, e.Type)
+	if err != nil {
+		return nil, err
+	}
+
 	l := &sdcpb.LeafSchema{
 		Name:           e.Name,
 		Namespace:      e.Namespace().Name,
-		Type:           toSchemaType(e.Type),
+		Type:           entryType,
 		IsMandatory:    e.Mandatory.Value(),
 		Units:          e.Units,
 		MustStatements: getMustStatement(e),
@@ -60,10 +65,11 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafSchema {
 		}
 	}
 
-	return l
+	return l, nil
 }
 
-func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
+// toSchemaType e is the yang.Entry that the type belongs to, yt is the actual type.
+func toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, error) {
 	var enumNames []string
 	if yt.Enum != nil {
 		enumNames = yt.Enum.Names()
@@ -95,13 +101,17 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 			Inverted: false,
 		})
 	}
-	if yt.Kind == yang.Yunion {
-		for _, ytt := range yt.Type {
-			slt.UnionTypes = append(slt.UnionTypes, toSchemaType(ytt))
-		}
-	}
-	if yt.Kind == yang.Yidentityref {
 
+	switch yt.Kind {
+	case yang.Yunion:
+		for _, ytt := range yt.Type {
+			schem, err := toSchemaType(e, ytt)
+			if err != nil {
+				return nil, err
+			}
+			slt.UnionTypes = append(slt.UnionTypes, schem)
+		}
+	case yang.Yidentityref:
 		if yt.IdentityBase == nil {
 			panic("expected identityref type to have IdentityBase")
 		}
@@ -113,9 +123,16 @@ func toSchemaType(yt *yang.YangType) *sdcpb.SchemaLeafType {
 			slt.IdentityPrefixesMap[identity.Name] = identityRoot.GetPrefix()
 			slt.ModulePrefixMap[identity.Name] = identityRoot.NName()
 		}
+	case yang.Yleafref:
+		var err error
+		leafSchemEntry := e.Find(yt.Path)
+		slt.LeafrefTargetType, err = toSchemaType(leafSchemEntry, leafSchemEntry.Type)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return slt
+	return slt, nil
 }
 
 func yRangeToSchemaMinMaxType(r *yang.YRange) *sdcpb.SchemaMinMaxType {
