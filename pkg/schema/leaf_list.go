@@ -19,11 +19,15 @@ import (
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
-func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
+func leafListFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafListSchema, error) {
+	entryType, err := toSchemaType(e, e.Type)
+	if err != nil {
+		return nil, err
+	}
 	ll := &sdcpb.LeafListSchema{
 		Name:           e.Name,
 		Namespace:      e.Namespace().Name,
-		Type:           toSchemaType(e.Type),
+		Type:           entryType,
 		Units:          e.Units,
 		MustStatements: getMustStatement(e),
 		IsState:        isState(e),
@@ -50,5 +54,5 @@ func leafListFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.LeafListSchema {
 		}
 	}
 
-	return ll
+	return ll, nil
 }

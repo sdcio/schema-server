@@ -25,26 +25,38 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) *sdcpb.SchemaElem {
+func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, error) {
 	switch {
 	case e.IsLeaf():
+		leaf, err := leafFromYEntry(e, withDesc)
+		if err != nil {
+			return nil, err
+		}
 		return &sdcpb.SchemaElem{
 			Schema: &sdcpb.SchemaElem_Field{
-				Field: leafFromYEntry(e, withDesc),
+				Field: leaf,
 			},
-		}
+		}, nil
 	case e.IsLeafList():
+		leaflist, err := leafListFromYEntry(e, withDesc)
+		if err != nil {
+			return nil, err
+		}
 		return &sdcpb.SchemaElem{
 			Schema: &sdcpb.SchemaElem_Leaflist{
-				Leaflist: leafListFromYEntry(e, withDesc),
+				Leaflist: leaflist,
 			},
-		}
+		}, nil
 	default:
+		container, err := containerFromYEntry(e, withDesc)
+		if err != nil {
+			return nil, err
+		}
 		return &sdcpb.SchemaElem{
 			Schema: &sdcpb.SchemaElem_Container{
-				Container: containerFromYEntry(e, withDesc),
+				Container: container,
 			},
-		}
+		}, nil
 	}
 }
 
@@ -78,12 +90,26 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 			return getEntry(e, pe[offset:])
 		}
 	}
+
+	// fmt.Printf("New Seach %s\n", first)
+	// for _, child := range sc.root.Dir {
+	// 	if cc, ok := child.Dir[first]; ok {
+	// 		fmt.Printf("Found %s, Model: %s\n", cc.Name, yang.RootNode(child.Node).Name)
+	// 	}
+	// }
+
 	// In case no module has been defined in the path, we try all modules and match the first element
 	// in the children of each module.
 	// skip first level modules and try their children
 	for _, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
-			return getEntry(cc, pe[offset:])
+			entry, err := getEntry(cc, pe[offset:])
+			if err == nil {
+				return entry, nil
+			}
+			if err != nil {
+				fmt.Println(pe[offset:])
+			}
 		}
 		// if no child of a submodule was found, try to return the module
 		if child.Name == first {
