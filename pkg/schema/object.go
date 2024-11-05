@@ -25,10 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, error) {
+func (sc *Schema) SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, error) {
 	switch {
 	case e.IsLeaf():
-		leaf, err := leafFromYEntry(e, withDesc)
+		leaf, err := sc.leafFromYEntry(e, withDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -38,7 +38,7 @@ func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, erro
 			},
 		}, nil
 	case e.IsLeafList():
-		leaflist, err := leafListFromYEntry(e, withDesc)
+		leaflist, err := sc.leafListFromYEntry(e, withDesc)
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, erro
 			},
 		}, nil
 	default:
-		container, err := containerFromYEntry(e, withDesc)
+		container, err := sc.containerFromYEntry(e, withDesc)
 		if err != nil {
 			return nil, err
 		}

@@ -22,8 +22,8 @@ import (
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
-func leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchema, error) {
-	entryType, err := toSchemaType(e, e.Type)
+func (sc *Schema) leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchema, error) {
+	entryType, err := sc.toSchemaType(e, e.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchema, error) {
 }
 
 // toSchemaType e is the yang.Entry that the type belongs to, yt is the actual type.
-func toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, error) {
+func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, error) {
 	var enumNames []string
 	if yt.Enum != nil {
 		enumNames = yt.Enum.Names()
@@ -105,7 +105,7 @@ func toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, erro
 	switch yt.Kind {
 	case yang.Yunion:
 		for _, ytt := range yt.Type {
-			schem, err := toSchemaType(e, ytt)
+			schem, err := sc.toSchemaType(e, ytt)
 			if err != nil {
 				return nil, err
 			}
@@ -125,8 +125,14 @@ func toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, erro
 		}
 	case yang.Yleafref:
 		var err error
-		leafSchemEntry := e.Find(yt.Path)
-		slt.LeafrefTargetType, err = toSchemaType(leafSchemEntry, leafSchemEntry.Type)
+		normalizedPath := normalizePath(yt.Path, e)
+		leafSchemaEntry, err := sc.GetEntry(normalizedPath)
+		if err != nil {
+			return nil, err
+		}
+		lsePath := leafSchemaEntry.Path()
+		_ = lsePath
+		slt.LeafrefTargetType, err = sc.toSchemaType(leafSchemaEntry, leafSchemaEntry.Type)
 		if err != nil {
 			return nil, err
 		}
