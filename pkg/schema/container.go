@@ -22,7 +22,7 @@ import (
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
-func containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.ContainerSchema, error) {
+func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.ContainerSchema, error) {
 	c := &sdcpb.ContainerSchema{
 		Name:              e.Name,
 		Namespace:         e.Namespace().Name,
@@ -64,7 +64,7 @@ func containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.ContainerSchema, 
 		case child.IsDir():
 			c.Children = append(c.Children, child.Name)
 		case child.IsLeaf(), child.IsLeafList():
-			o, err := SchemaElemFromYEntry(child, withDesc)
+			o, err := sc.SchemaElemFromYEntry(child, withDesc)
 			if err != nil {
 				return nil, err
 			}

@@ -569,7 +569,7 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 	// build entry key
 	key := buildEntryKey(store.Key(sc), getEntryPath(e))
 	// get entry proto
-	se, err := schema.SchemaElemFromYEntry(e, true)
+	se, err := sc.SchemaElemFromYEntry(e, true)
 	if err != nil {
 		return err
 	}

@@ -60,7 +60,7 @@ func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (
 	if err != nil {
 		return nil, err
 	}
-	schemElem, err := schema.SchemaElemFromYEntry(e, req.GetWithDescription())
+	schemElem, err := sc.SchemaElemFromYEntry(e, req.GetWithDescription())
 	if err != nil {
 		return nil, err
 	}
@@ -317,7 +317,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 				if !ok {
 					return
 				}
-				schemElem, err := schema.SchemaElemFromYEntry(e, req.GetWithDescription())
+				schemElem, err := sc.SchemaElemFromYEntry(e, req.GetWithDescription())
 				if err != nil {
 					log.Errorf("failed getting entries from schema: %v", err)
 				}

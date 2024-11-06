@@ -19,8 +19,8 @@ import (
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 )
 
-func leafListFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafListSchema, error) {
-	entryType, err := toSchemaType(e, e.Type)
+func (sc *Schema) leafListFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafListSchema, error) {
+	entryType, err := sc.toSchemaType(e, e.Type)
 	if err != nil {
 		return nil, err
 	}
