@@ -101,15 +101,13 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	// In case no module has been defined in the path, we try all modules and match the first element
 	// in the children of each module.
 	// skip first level modules and try their children
-	for _, child := range sc.root.Dir {
+	for name, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
 			entry, err := getEntry(cc, pe[offset:])
 			if err == nil {
 				return entry, nil
 			}
-			if err != nil {
-				fmt.Println(pe[offset:])
-			}
+			log.Debugf("looking up path %s in module %s caused: %v. continuing anyways", strings.Join(pe, "/"), name, err)
 		}
 		// if no child of a submodule was found, try to return the module
 		if child.Name == first {
@@ -121,7 +119,7 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		return getEntry(cc, pe[offset:])
 	}
 
-	return nil, fmt.Errorf("entry %q not found", pe[0])
+	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
 }
 
 func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
