@@ -130,8 +130,6 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 		if err != nil {
 			return nil, err
 		}
-		lsePath := leafSchemaEntry.Path()
-		_ = lsePath
 		slt.LeafrefTargetType, err = sc.toSchemaType(leafSchemaEntry, leafSchemaEntry.Type)
 		if err != nil {
 			return nil, err
