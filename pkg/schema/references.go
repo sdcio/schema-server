@@ -157,10 +157,10 @@ func relativeToAbsPath(p *sdcpb.Path, e *yang.Entry) *sdcpb.Path {
 		}
 		if pe.Name == ".." {
 			// fmt.Println("relative path @E", ce.Name, e.IsCase(), e.IsChoice())
+			ce = ce.Parent
 			for (ce.IsCase() || ce.IsChoice()) && ce.Parent != nil {
 				ce = ce.Parent.Parent
 			}
-			ce = ce.Parent
 			continue
 		}
 		// fmt.Println("ce | np", ce.Name, np)
