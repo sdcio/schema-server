@@ -74,25 +74,26 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	defer sc.m.RUnlock()
 
 	// Assume we are always dealing with an absolute path here?
-	mod, err := sc.FindModuleForPathElement(sc.root, pe[0])
+	mods, err := sc.FindPossibleModulesForPathElement(sc.root, pe[0])
 	if err != nil {
 		return nil, err
 	}
 
-	// do we only have the module name in that path? If so we are done
-	prefix, path, found := strings.Cut(pe[0], ":")
-	if !found {
-		path = prefix
-		prefix = ""
+	for i, mod := range mods {
+		entry, err := getEntry(mod, pe)
+		if err == nil {
+			return entry, nil
+		}
+		remainingMods := make([]string, 0, len(mods)-(i+1))
+		for _, rMod := range mods[i+1:] {
+			remainingMods = append(remainingMods, rMod.Name)
+		}
+		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
 	}
-	if mod.Name == path && len(pe) == 1 {
-		return mod, nil
-	}
-
-	return getEntry(mod, pe)
+	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
 }
 
-func (sc *Schema) FindModuleForPathElement(e *yang.Entry, pathElement string) (*yang.Entry, error) {
+func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement string) ([]*yang.Entry, error) {
 	if e == nil {
 		return nil, errors.New("nil yang entry")
 	}
@@ -102,21 +103,25 @@ func (sc *Schema) FindModuleForPathElement(e *yang.Entry, pathElement string) (*
 		path = prefix
 		prefix = ""
 	}
-	// try to shortcut by returning the module if it exists
+	// try to shortcut by returning the module directly if pathElement matches the name/prefix
 	if mod, ok := e.Dir[path]; ok && (!foundPrefix || mod.Prefix.Name == prefix) {
-		return mod, nil
+		return []*yang.Entry{mod}, nil
 	}
 
 	switch {
 	case e.Node == nil && e.Name != RootName:
 		return nil, fmt.Errorf("entry has no Node but is not root, instead is %s", e.Name)
 	case e.Node == nil:
+		entries := make([]*yang.Entry, 0)
 		for _, entry := range sc.root.Dir {
 			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
-				return entry, nil
+				entries = append(entries, entry)
 			}
 		}
-		return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
+		if len(entries) == 0 {
+			return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
+		}
+		return entries, nil
 
 	default:
 		mod := yang.RootNode(e.Node)
@@ -126,7 +131,7 @@ func (sc *Schema) FindModuleForPathElement(e *yang.Entry, pathElement string) (*
 				return nil, fmt.Errorf("module %q not found in loaded modules", mod.Name)
 			}
 			if _, ok := foundEntry.Dir[path]; ok {
-				return foundEntry, nil
+				return []*yang.Entry{foundEntry}, nil
 			}
 		}
 
@@ -137,7 +142,7 @@ func (sc *Schema) FindModuleForPathElement(e *yang.Entry, pathElement string) (*
 					return nil, fmt.Errorf("module %q not found in loaded modules", i.Name)
 				}
 				if _, ok := foundEntry.Dir[path]; ok {
-					return foundEntry, nil
+					return []*yang.Entry{foundEntry}, nil
 				}
 			}
 		}
