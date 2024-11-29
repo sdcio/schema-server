@@ -1,7 +1,8 @@
 module github.com/sdcio/schema-server
 
-go 1.22.0
-toolchain go1.22.9
+go 1.22.7
+
+toolchain go1.23.3
 
 require (
 	github.com/dgraph-io/badger/v4 v4.4.0
