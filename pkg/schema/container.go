@@ -87,11 +87,15 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 	return c, nil
 }
 
-func getMandatoryChildren(e *yang.Entry) []string {
-	result := []string{}
+func getMandatoryChildren(e *yang.Entry) []*sdcpb.MandatoryChild {
+	result := []*sdcpb.MandatoryChild{}
 	for k, v := range e.Dir {
 		if v.Mandatory == yang.TSTrue {
-			result = append(result, k)
+			c := &sdcpb.MandatoryChild{
+				Name:    k,
+				IsState: isState(v),
+			}
+			result = append(result, c)
 		}
 	}
 	return result
