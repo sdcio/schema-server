@@ -90,6 +90,12 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		}
 		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
 	}
+
+	// if we are here we have not found a path, maybe we have a module name
+	// if we have one module and one path element, likely a module return this
+	if len(mods) == 1 && len(pe) == 1 && mods[0].Name == pe[0] {
+		return mods[0], nil
+	}
 	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
 }
 
