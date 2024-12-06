@@ -15,7 +15,8 @@
 package schema
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -55,10 +56,7 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 		}
 	}
 
-	keys := map[string]struct{}{}
-	for _, key := range strings.Fields(e.Key) {
-		keys[key] = struct{}{}
-	}
+	keys := strings.Fields(e.Key)
 	for _, child := range getChildren(e) {
 		switch {
 		case child.IsDir():
@@ -70,7 +68,7 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 			}
 			switch o := o.Schema.(type) {
 			case *sdcpb.SchemaElem_Field:
-				if _, ok := keys[child.Name]; ok {
+				if slices.Index(keys, child.Name) != -1 {
 					c.Keys = append(c.Keys, o.Field)
 					continue
 				}
@@ -80,9 +78,10 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 			}
 		}
 	}
-	sort.Strings(c.Children)
-	sort.Slice(c.Keys, func(i, j int) bool {
-		return c.Keys[i].GetName() < c.Keys[j].GetName()
+	slices.Sort(c.Children)
+	// keep ordering based on schema
+	slices.SortFunc(c.Keys, func(a, b *sdcpb.LeafSchema) int {
+		return cmp.Compare(slices.Index(keys, a.GetName()), slices.Index(keys, b.GetName()))
 	})
 	return c, nil
 }

@@ -69,57 +69,91 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	// for example:
 	//   []string{"srl_nokia-if:interface", "srl_nokia-if:name"}
 	//   []string{"interface", "name"}
-	first := pe[0]
-	offset := 1
-	index := strings.Index(pe[0], ":")
-	if index > 0 {
-		first = pe[0][:index]
-		pe[0] = pe[0][index+1:]
-		offset = 0
-	}
 
 	sc.m.RLock()
 	defer sc.m.RUnlock()
-	// In case the YANG module name is the same as the first top-level container,
-	// we need to make sure to lookup the module only when the module is defined in the path
-	if index > 0 {
-		if e, ok := sc.root.Dir[first]; ok {
-			if e == nil {
-				return nil, fmt.Errorf("module %q not found", first)
-			}
-			return getEntry(e, pe[offset:])
-		}
+
+	// Assume we are always dealing with an absolute path here?
+	mods, err := sc.FindPossibleModulesForPathElement(sc.root, pe[0])
+	if err != nil {
+		return nil, err
 	}
 
-	// fmt.Printf("New Seach %s\n", first)
-	// for _, child := range sc.root.Dir {
-	// 	if cc, ok := child.Dir[first]; ok {
-	// 		fmt.Printf("Found %s, Model: %s\n", cc.Name, yang.RootNode(child.Node).Name)
-	// 	}
-	// }
-
-	// In case no module has been defined in the path, we try all modules and match the first element
-	// in the children of each module.
-	// skip first level modules and try their children
-	for name, child := range sc.root.Dir {
-		if cc, ok := child.Dir[first]; ok {
-			entry, err := getEntry(cc, pe[offset:])
-			if err == nil {
-				return entry, nil
-			}
-			log.Debugf("looking up path %s in module %s caused: %v. continuing anyways", strings.Join(pe, "/"), name, err)
+	for i, mod := range mods {
+		entry, err := getEntry(mod, pe)
+		if err == nil {
+			return entry, nil
 		}
-		// if no child of a submodule was found, try to return the module
-		if child.Name == first {
-			return child, nil
+		remainingMods := make([]string, 0, len(mods)-(i+1))
+		for _, rMod := range mods[i+1:] {
+			remainingMods = append(remainingMods, rMod.Name)
 		}
+		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
 	}
 
-	if cc, ok := sc.root.Dir[first]; ok {
-		return getEntry(cc, pe[offset:])
+	// if we are here we have not found a path, maybe we have a module name
+	// if we have one module and one path element, likely a module return this
+	if len(mods) == 1 && len(pe) == 1 && mods[0].Name == pe[0] {
+		return mods[0], nil
 	}
-
 	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
+}
+
+func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement string) ([]*yang.Entry, error) {
+	if e == nil {
+		return nil, errors.New("nil yang entry")
+	}
+
+	prefix, path, foundPrefix := strings.Cut(pathElement, ":")
+	if !foundPrefix {
+		path = prefix
+		prefix = ""
+	}
+	// try to shortcut by returning the module directly if pathElement matches the name/prefix
+	if mod, ok := e.Dir[path]; ok && (!foundPrefix || mod.Prefix.Name == prefix) {
+		return []*yang.Entry{mod}, nil
+	}
+
+	switch {
+	case e.Node == nil && e.Name != RootName:
+		return nil, fmt.Errorf("entry has no Node but is not root, instead is %s", e.Name)
+	case e.Node == nil:
+		entries := make([]*yang.Entry, 0)
+		for _, entry := range sc.root.Dir {
+			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
+				entries = append(entries, entry)
+			}
+		}
+		if len(entries) == 0 {
+			return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
+		}
+		return entries, nil
+
+	default:
+		mod := yang.RootNode(e.Node)
+		if prefix == mod.GetPrefix() {
+			foundEntry, ok := sc.root.Dir[mod.Name]
+			if !ok {
+				return nil, fmt.Errorf("module %q not found in loaded modules", mod.Name)
+			}
+			if _, ok := foundEntry.Dir[path]; ok {
+				return []*yang.Entry{foundEntry}, nil
+			}
+		}
+
+		for _, i := range mod.Import {
+			if prefix == i.Prefix.Name {
+				foundEntry, ok := sc.root.Dir[i.Name]
+				if !ok {
+					return nil, fmt.Errorf("module %q not found in loaded modules", i.Name)
+				}
+				if _, ok := foundEntry.Dir[path]; ok {
+					return []*yang.Entry{foundEntry}, nil
+				}
+			}
+		}
+	}
+	return nil, fmt.Errorf("error getting Element for pathElement %q", pathElement)
 }
 
 func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
@@ -150,7 +184,11 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 		}
 		for _, ee := range getChildren(e) {
 			// fmt.Printf("entry %s, child %s | %s\n", e.Name, ee.Name, pe)
-			if ee.Name != pe[0] {
+
+			// prefix will be in [0] if exists, so path will always be in last index
+			// compare name without prefix
+			pathElements := strings.SplitN(pe[0], ":", 2)
+			if ee.Name != pathElements[len(pathElements)-1] {
 				continue
 			}
 			return getEntry(ee, pe[1:])
@@ -251,8 +289,16 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		return sc.buildPath(pe[count:], p, ee)
 	case e.IsChoice():
 		p.Elem = append(p.Elem, cpe)
-		if ee, ok := e.Dir[pe[0]]; ok {
-			return sc.buildPath(pe[1:], p, ee)
+		for _, entry := range e.Dir {
+			if entry.IsCase() {
+				if ee, ok := entry.Dir[pe[0]]; ok {
+					return sc.buildPath(pe[1:], p, ee)
+				}
+			} else {
+				if ee, ok := e.Dir[pe[0]]; ok {
+					return sc.buildPath(pe[1:], p, ee)
+				}
+			}
 		}
 		return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
 	case e.IsCase():
