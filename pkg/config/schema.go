@@ -26,6 +26,10 @@ const (
 	StoreTypeMemory     = "memory"
 )
 
+var (
+	ImportedMods = []string{"ietf", "iana"}
+)
+
 type SchemaStoreConfig struct {
 	Type    string                         `yaml:"type,omitempty" json:"type,omitempty"`
 	Path    string                         `yaml:"path,omitempty" json:"path,omitempty"`
