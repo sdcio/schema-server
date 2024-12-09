@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/schema-server/pkg/config"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 )
@@ -78,7 +79,6 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	for i, mod := range mods {
 		entry, err := getEntry(mod, pe)
 		if err == nil {
@@ -90,7 +90,6 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		}
 		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
 	}
-
 	// if we are here we have not found a path, maybe we have a module name
 	// if we have one module and one path element, likely a module return this
 	if len(mods) == 1 && len(pe) == 1 && mods[0].Name == pe[0] {
@@ -127,6 +126,29 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 		if len(entries) == 0 {
 			return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
 		}
+		sort.Slice(entries, func(i, j int) bool {
+			var containsModA bool = false
+			var containsModB bool = false
+			// Check if string[i] contains string in ImportedMods and string[j] does not
+			for _, s := range config.ImportedMods {
+				if !containsModA {
+					containsModA = strings.Contains(entries[i].Name, s)
+				}
+				if !containsModB {
+					containsModB = strings.Contains(entries[j].Name, s)
+				}
+			}
+			// If string[i] contains string in ImportedMods and string[j] does not, we want to move string[i] to the end
+			if containsModA && !containsModB {
+				return false
+			}
+			// If string[j] contains string in ImportedMods and string[i] does not, we want to move string[j] to the end
+			if !containsModA && containsModB {
+				return true
+			}
+			// If both or neither contain string in ImportedMods, compare lexicographically
+			return entries[i].Name < entries[j].Name
+		})
 		return entries, nil
 
 	default:
