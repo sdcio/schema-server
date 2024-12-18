@@ -37,7 +37,6 @@ COPY --from=builder /etc/passwd /etc/group /etc/shadow /etc/
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --chown=$USERID:$USERID schema-server /app/
-COPY --chown=$USERID:$USERID schemac /app/
 COPY --from=builder --chown=$USERID:$USERID /schemas /schemas
 WORKDIR /app
 
