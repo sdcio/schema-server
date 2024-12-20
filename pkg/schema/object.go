@@ -22,6 +22,7 @@ import (
 
 	"github.com/openconfig/goyang/pkg/yang"
 	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/utils"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	log "github.com/sirupsen/logrus"
 )
@@ -127,27 +128,7 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 			return nil, fmt.Errorf("unable to find entry for prefix %q, path %q in root", prefix, path)
 		}
 		sort.Slice(entries, func(i, j int) bool {
-			var containsModA bool = false
-			var containsModB bool = false
-			// Check if string[i] contains string in ImportedMods and string[j] does not
-			for _, s := range config.ImportedMods {
-				if !containsModA {
-					containsModA = strings.Contains(entries[i].Name, s)
-				}
-				if !containsModB {
-					containsModB = strings.Contains(entries[j].Name, s)
-				}
-			}
-			// If string[i] contains string in ImportedMods and string[j] does not, we want to move string[i] to the end
-			if containsModA && !containsModB {
-				return false
-			}
-			// If string[j] contains string in ImportedMods and string[i] does not, we want to move string[j] to the end
-			if !containsModA && containsModB {
-				return true
-			}
-			// If both or neither contain string in ImportedMods, compare lexicographically
-			return entries[i].Name < entries[j].Name
+			return utils.SortModulesAB(entries[i].Name, entries[j].Name, config.DeprioritizedModules)
 		})
 		return entries, nil
 
