@@ -292,3 +292,33 @@ func ToXPath(p *sdcpb.Path, noKeys bool) string {
 	}
 	return sb.String()
 }
+
+// SortModulesAB takes two module names and the deprioritization Module list. It figures for a and for b if they
+// match the depriorization list and deprioritize the entry if matches. If both do not match or do match a
+// lexicographic comparison is performed.
+func SortModulesAB(a, b string, deprioritizedModules []string) bool {
+	var containsModA bool = false
+	var containsModB bool = false
+
+	// Check if string[i] contains string in ImportedMods and string[j] does not
+	for _, s := range deprioritizedModules {
+		containsModA = strings.Contains(a, s)
+		if containsModA {
+			break
+		}
+	}
+	for _, s := range deprioritizedModules {
+		containsModB = strings.Contains(b, s)
+		if containsModB {
+			break
+		}
+	}
+
+	// If both or neither contain string in ImportedMods, compare lexicographically
+	if containsModA == containsModB {
+		return a < b
+	}
+
+	// If string[j] contains string in ImportedMods and string[i] does not, we want to move string[j] to the end
+	return !containsModA && containsModB
+}

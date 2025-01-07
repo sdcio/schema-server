@@ -782,27 +782,7 @@ func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaReques
 			return nil, err
 		}
 		sort.Slice(modules, func(i, j int) bool {
-			var containsModA bool = false
-			var containsModB bool = false
-			// Check if string[i] contains string in ImportedMods and string[j] does not
-			for _, s := range config.ImportedMods {
-				if !containsModA {
-					containsModA = strings.Contains(modules[i], s)
-				}
-				if !containsModB {
-					containsModB = strings.Contains(modules[j], s)
-				}
-			}
-			// If string[i] contains string in ImportedMods and string[j] does not, we want to move string[i] to the end
-			if containsModA && !containsModB {
-				return false
-			}
-			// If string[j] contains string in ImportedMods and string[i] does not, we want to move string[j] to the end
-			if !containsModA && containsModB {
-				return true
-			}
-			// If both or neither contain string in ImportedMods, compare lexicographically
-			return modules[i] < modules[j]
+			return utils.SortModulesAB(modules[i], modules[j], config.DeprioritizedModules)
 		})
 	}
 

@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	ImportedMods = []string{"ietf", "iana"}
+	DeprioritizedModules = []string{"ietf", "iana"}
 )
 
 type SchemaStoreConfig struct {
