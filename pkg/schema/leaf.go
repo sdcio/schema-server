@@ -76,15 +76,16 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 	}
 
 	slt := &sdcpb.SchemaLeafType{
-		Type:       yt.Kind.String(),
-		Range:      []*sdcpb.SchemaMinMaxType{},
-		Length:     []*sdcpb.SchemaMinMaxType{},
-		EnumNames:  enumNames,
-		Units:      yt.Units,
-		TypeName:   yt.Name,
-		Leafref:    yt.Path,
-		Patterns:   []*sdcpb.SchemaPattern{},
-		UnionTypes: []*sdcpb.SchemaLeafType{},
+		Type:             yt.Kind.String(),
+		Range:            []*sdcpb.SchemaMinMaxType{},
+		Length:           []*sdcpb.SchemaMinMaxType{},
+		EnumNames:        enumNames,
+		Units:            yt.Units,
+		TypeName:         yt.Name,
+		Leafref:          yt.Path,
+		OptionalInstance: yt.OptionalInstance,
+		Patterns:         []*sdcpb.SchemaPattern{},
+		UnionTypes:       []*sdcpb.SchemaLeafType{},
 	}
 
 	for _, l := range yt.Length {
