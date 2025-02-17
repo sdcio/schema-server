@@ -25,18 +25,19 @@ import (
 
 func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.ContainerSchema, error) {
 	c := &sdcpb.ContainerSchema{
-		Name:              e.Name,
-		Namespace:         e.Namespace().Name,
-		Keys:              []*sdcpb.LeafSchema{},
-		Fields:            []*sdcpb.LeafSchema{},
-		Leaflists:         []*sdcpb.LeafListSchema{},
-		Children:          []string{},
-		MandatoryChildren: getMandatoryChildren(e),
-		MustStatements:    getMustStatement(e),
-		IsState:           isState(e),
-		IsPresence:        isPresence(e),
-		ChoiceInfo:        getChoiceInfo(e),
-		IfFeature:         getIfFeature(e),
+		Name:               e.Name,
+		Namespace:          e.Namespace().Name,
+		Keys:               []*sdcpb.LeafSchema{},
+		Fields:             []*sdcpb.LeafSchema{},
+		Leaflists:          []*sdcpb.LeafListSchema{},
+		Children:           []string{},
+		MandatoryChildren:  getMandatoryChildren(e),
+		MustStatements:     getMustStatement(e),
+		IsState:            isState(e),
+		IsPresence:         isPresence(e),
+		ChoiceInfo:         getChoiceInfo(e),
+		IfFeature:          getIfFeature(e),
+		ChildsWithDefaults: []string{},
 	}
 	if withDesc {
 		c.Description = e.Description
@@ -73,9 +74,19 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 					continue
 				}
 				c.Fields = append(c.Fields, o.Field)
+				// fill ChildsWithDefaults
+				if o.Field.Default != "" {
+					c.ChildsWithDefaults = append(c.ChildsWithDefaults, child.Name)
+				}
 			case *sdcpb.SchemaElem_Leaflist:
 				c.Leaflists = append(c.Leaflists, o.Leaflist)
+
+				// fill ChildsWithDefaults
+				if len(o.Leaflist.Defaults) > 0 {
+					c.ChildsWithDefaults = append(c.ChildsWithDefaults, child.Name)
+				}
 			}
+
 		}
 	}
 	slices.Sort(c.Children)
