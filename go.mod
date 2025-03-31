@@ -1,6 +1,7 @@
 module github.com/sdcio/schema-server
 
 go 1.23.3
+toolchain go1.24.1
 
 replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.0-2
 
@@ -20,7 +21,7 @@ require (
 	google.golang.org/grpc v1.70.0
 	google.golang.org/protobuf v1.36.5
 	gopkg.in/yaml.v2 v2.4.0
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.4
 )
 
 require (
