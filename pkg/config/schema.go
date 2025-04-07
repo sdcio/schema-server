@@ -31,10 +31,11 @@ var (
 )
 
 type SchemaStoreConfig struct {
-	Type    string                         `yaml:"type,omitempty" json:"type,omitempty"`
-	Path    string                         `yaml:"path,omitempty" json:"path,omitempty"`
-	Cache   *SchemaPersistStoreCacheConfig `json:"cache,omitempty"`
-	Schemas []*SchemaConfig                `yaml:"schemas,omitempty" json:"schemas,omitempty"`
+	Type       string                         `yaml:"type,omitempty" json:"type,omitempty"`
+	Path       string                         `yaml:"path,omitempty" json:"path,omitempty"`
+	UploadPath string                         `yaml:"upload_path,omitempty" json:"upload_path,omitempty"`
+	Cache      *SchemaPersistStoreCacheConfig `json:"cache,omitempty"`
+	Schemas    []*SchemaConfig                `yaml:"schemas,omitempty" json:"schemas,omitempty"`
 }
 
 type SchemaPersistStoreCacheConfig struct {

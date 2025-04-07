@@ -32,14 +32,16 @@ import (
 )
 
 type memStore struct {
-	ms      *sync.RWMutex
-	schemas map[store.SchemaKey]*schema.Schema
+	ms                *sync.RWMutex
+	schemas           map[store.SchemaKey]*schema.Schema
+	baseSchemaLoadDir string
 }
 
-func New() store.Store {
+func New(baseSchemaLoadDir string) store.Store {
 	return &memStore{
-		ms:      &sync.RWMutex{},
-		schemas: map[store.SchemaKey]*schema.Schema{},
+		ms:                &sync.RWMutex{},
+		schemas:           map[store.SchemaKey]*schema.Schema{},
+		baseSchemaLoadDir: baseSchemaLoadDir,
 	}
 }
 

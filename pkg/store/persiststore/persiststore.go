@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"sort"
 	"strings"
 	"time"
@@ -63,10 +64,12 @@ type persistStore struct {
 	cfn                  context.CancelFunc
 	db                   *badger.DB
 	cache                *ttlcache.Cache[cacheKey, *sdcpb.GetSchemaResponse]
+	// defines the dir where schemas are uploaded, which is used as the prefix dir for schema create and where schema uploads are stored
+	schemaUploadDir string
 }
 
-func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfig) (store.Store, error) {
-	s := &persistStore{path: p}
+func New(ctx context.Context, schemaUploadDir string, storePath string, cfg *config.SchemaPersistStoreCacheConfig) (store.Store, error) {
+	s := &persistStore{path: storePath, schemaUploadDir: schemaUploadDir}
 	var err error
 	s.db, err = s.openDB(ctx)
 	if err != nil {
@@ -78,7 +81,7 @@ func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfi
 	}
 	// with cache
 	s.cacheWithDescription = cfg.WithDescription
-	s.cache = ttlcache.New[cacheKey, *sdcpb.GetSchemaResponse](
+	s.cache = ttlcache.New(
 		ttlcache.WithTTL[cacheKey, *sdcpb.GetSchemaResponse](cfg.TTL),
 		ttlcache.WithCapacity[cacheKey, *sdcpb.GetSchemaResponse](cfg.Capacity),
 	)
@@ -209,8 +212,8 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
 			Version:     req.GetSchema().GetVersion(),
-			Files:       req.GetFile(),
-			Directories: req.GetDirectory(),
+			Files:       prefixPaths(s.schemaUploadDir, req.GetFile()),
+			Directories: prefixPaths(s.schemaUploadDir, req.GetDirectory()),
 			Excludes:    req.GetExclude(),
 		},
 	)
@@ -226,6 +229,14 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 	return &sdcpb.CreateSchemaResponse{
 		Schema: reqSchema,
 	}, nil
+}
+
+func prefixPaths(prefix string, paths []string) []string {
+	result := make([]string, 0, len(paths))
+	for _, x := range paths {
+		result = append(result, path.Join(prefix, x))
+	}
+	return result
 }
 
 func (s *persistStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {

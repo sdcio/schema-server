@@ -67,12 +67,12 @@ func NewServer(c *config.Config) (*Server, error) {
 	switch c.SchemaStore.Type {
 	case config.StoreTypePersistent:
 		var err error
-		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path, c.SchemaStore.Cache)
+		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.UploadPath, c.SchemaStore.Path, c.SchemaStore.Cache)
 		if err != nil {
 			return nil, err
 		}
 	case config.StoreTypeMemory:
-		s.schemaStore = memstore.New()
+		s.schemaStore = memstore.New(c.SchemaStore.UploadPath)
 	default:
 		return nil, fmt.Errorf("unknown schema store type %q", c.SchemaStore.Type)
 	}
