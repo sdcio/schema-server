@@ -2,7 +2,7 @@ module github.com/sdcio/schema-server
 
 go 1.23.3
 
-replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.0-2
+replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.2-2
 
 require (
 	github.com/dgraph-io/badger/v4 v4.5.1
@@ -77,7 +77,7 @@ require (
 
 require (
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/net v0.34.0 // indirect
