@@ -15,6 +15,8 @@
 package schema
 
 import (
+	"cmp"
+	"slices"
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -74,12 +76,26 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 	if yt.Enum != nil {
 		enumNames = yt.Enum.Names()
 	}
+	var bits []*sdcpb.Bit
+	if yt.Bit != nil {
+		bits = make([]*sdcpb.Bit, 0, len(yt.Bit.ToInt))
+		for bitName, position := range yt.Bit.ToInt {
+			bits = append(bits, &sdcpb.Bit{
+				Name:     bitName,
+				Position: uint32(position),
+			})
+		}
+		slices.SortFunc(bits, func(a, b *sdcpb.Bit) int {
+			return cmp.Compare(a.Position, b.Position)
+		})
+	}
 
 	slt := &sdcpb.SchemaLeafType{
 		Type:             yt.Kind.String(),
 		Range:            []*sdcpb.SchemaMinMaxType{},
 		Length:           []*sdcpb.SchemaMinMaxType{},
 		EnumNames:        enumNames,
+		Bits:             bits,
 		Units:            yt.Units,
 		TypeName:         yt.Name,
 		Leafref:          yt.Path,
