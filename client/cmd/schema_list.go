@@ -21,6 +21,7 @@ import (
 	"sort"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/prototext"
 
@@ -64,12 +65,22 @@ var schemaListCmd = &cobra.Command{
 				}
 				return tableData[i][0] < tableData[j][0]
 			})
-			table := tablewriter.NewWriter(os.Stdout)
-			table.SetHeader([]string{"Name", "Vendor", "Version"})
-			table.SetAlignment(tablewriter.ALIGN_LEFT)
-			table.SetAutoFormatHeaders(false)
-			table.SetAutoWrapText(false)
-			table.AppendBulk(tableData)
+			cfg := tablewriter.Config{
+				Header: tw.CellConfig{
+					Alignment:  tw.CellAlignment{Global: tw.AlignCenter},
+					Formatting: tw.CellFormatting{AutoFormat: tw.On},
+				},
+				Row: tw.CellConfig{
+					Alignment:  tw.CellAlignment{Global: tw.AlignLeft},
+					Formatting: tw.CellFormatting{AutoWrap: tw.WrapTruncate},
+				},
+				MaxWidth: 80,
+				Behavior: tw.Behavior{TrimSpace: tw.On},
+			}
+			table := tablewriter.NewTable(os.Stdout, tablewriter.WithConfig(cfg))
+			table.Header([]string{"Name", "Vendor", "Version"})
+			table.Append("Node1", "Ready")
+			table.Bulk(tableData)
 			table.Render()
 		case "proto":
 			fmt.Println(prototext.Format(schemaList))
