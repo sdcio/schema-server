@@ -16,7 +16,7 @@ require (
 	github.com/olekukonko/tablewriter v1.0.7
 	github.com/openconfig/goyang v1.6.0
 	github.com/prometheus/client_golang v1.22.0
-	github.com/sdcio/sdc-protos v0.0.42
+	github.com/sdcio/sdc-protos v0.0.43
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.6
 	google.golang.org/grpc v1.73.0

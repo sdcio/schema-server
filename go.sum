@@ -160,8 +160,8 @@ github.com/rogpeppe/go-internal v1.13.1/go.mod h1:uMEvuHeurkdAXX61udpOXGD/AzZDWN
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/sdcio/goyang v1.6.2-2 h1:qfeUKBmoKpiKAruuEc3+V8wgHKP/n1jRDEnTy23knV8=
 github.com/sdcio/goyang v1.6.2-2/go.mod h1:5WolITjek1NF8yrNERyVZ7jqjOClJTpO8p/+OwmETM4=
-github.com/sdcio/sdc-protos v0.0.42 h1:206N0V5UWUNMHitCnlcxdegFWMzvNn+xL1ZmtWVFz/s=
-github.com/sdcio/sdc-protos v0.0.42/go.mod h1:9WNcyeqRvq+dPnFhmtcz2Aol1O5iSbsgzbpLhbEN9VM=
+github.com/sdcio/sdc-protos v0.0.43 h1:4q3GWzXmdYELVAReRa0zMX93d35S3SIbQ3530DzVoOA=
+github.com/sdcio/sdc-protos v0.0.43/go.mod h1:9WNcyeqRvq+dPnFhmtcz2Aol1O5iSbsgzbpLhbEN9VM=
 github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6MwdIuYE2rE=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
