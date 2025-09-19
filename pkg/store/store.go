@@ -39,6 +39,8 @@ func Key(s *schema.Schema) SchemaKey {
 }
 
 type Store interface {
+	IsReadOnly() bool
+
 	HasSchema(scKey SchemaKey) bool
 	ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error)
 	GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error)
@@ -46,6 +48,7 @@ type Store interface {
 	ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error)
 	DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error)
 	AddSchema(sc *schema.Schema) error
+	Close() error
 
 	GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error)
 	GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRequest) (chan *sdcpb.SchemaElem, error)

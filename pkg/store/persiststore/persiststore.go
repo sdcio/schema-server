@@ -60,6 +60,7 @@ type cacheKey struct {
 type persistStore struct {
 	path                 string
 	cacheWithDescription bool
+	readOnly             bool
 	cfn                  context.CancelFunc
 	db                   *badger.DB
 	cache                *ttlcache.Cache[cacheKey, *sdcpb.GetSchemaResponse]
@@ -68,6 +69,8 @@ type persistStore struct {
 func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfig) (store.Store, error) {
 	s := &persistStore{path: p}
 	var err error
+	s.readOnly = cfg.ReadOnly
+
 	s.db, err = s.openDB(ctx)
 	if err != nil {
 		return nil, err
@@ -85,6 +88,10 @@ func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfi
 	// start cache cleanup
 	go s.cache.Start()
 	return s, nil
+}
+
+func (s *persistStore) IsReadOnly() bool {
+	return s.readOnly
 }
 
 func (s *persistStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
@@ -144,6 +151,11 @@ func (s *persistStore) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequ
 		return nil, err
 	}
 	return rs, nil
+}
+
+func (s *persistStore) Close() error {
+	s.cache.Stop()
+	return s.db.Close()
 }
 
 func (s *persistStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
@@ -664,7 +676,8 @@ func (s *persistStore) openDB(ctx context.Context) (*badger.DB, error) {
 	opts := badger.DefaultOptions(s.path).
 		WithLoggingLevel(badger.WARNING).
 		WithCompression(options.None).
-		WithBlockCacheSize(0)
+		WithBlockCacheSize(0).
+		WithReadOnly(s.readOnly)
 
 	ctx, s.cfn = context.WithCancel(ctx)
 
@@ -718,7 +731,7 @@ func getModules(txn *badger.Txn, sc store.SchemaKey) ([]string, error) {
 	return se.GetContainer().GetChildren(), nil
 }
 
-func (s *persistStore) getSchema(ctx context.Context, req *sdcpb.GetSchemaRequest, sck store.SchemaKey) (*sdcpb.GetSchemaResponse, error) {
+func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest, sck store.SchemaKey) (*sdcpb.GetSchemaResponse, error) {
 	pes := utils.ToStrings(req.GetPath(), false, true)
 	cKey := cacheKey{
 		SchemaKey: sck,

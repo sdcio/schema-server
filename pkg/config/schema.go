@@ -41,6 +41,7 @@ type SchemaPersistStoreCacheConfig struct {
 	TTL             time.Duration `yaml:"ttl,omitempty" json:"ttl,omitempty"`
 	Capacity        uint64        `yaml:"capacity,omitempty" json:"capacity,omitempty"`
 	WithDescription bool          `yaml:"with-description,omitempty" json:"with-description,omitempty"`
+	ReadOnly        bool          `yaml:"read-only,omitempty" json:"read-only,omitempty"`
 }
 
 type SchemaConfig struct {
