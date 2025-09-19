@@ -78,6 +78,14 @@ func (s *memStore) HasSchema(scKey store.SchemaKey) bool {
 	return ok
 }
 
+func (s *memStore) Close() error {
+	return nil
+}
+
+func (s *memStore) IsReadOnly() bool {
+	return false
+}
+
 func (s *memStore) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
