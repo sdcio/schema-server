@@ -66,10 +66,10 @@ type persistStore struct {
 	cache                *ttlcache.Cache[cacheKey, *sdcpb.GetSchemaResponse]
 }
 
-func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfig) (store.Store, error) {
+func New(ctx context.Context, p string, cfg *config.SchemaPersistStoreCacheConfig, readOnly bool) (store.Store, error) {
 	s := &persistStore{path: p}
 	var err error
-	s.readOnly = cfg.ReadOnly
+	s.readOnly = readOnly
 
 	s.db, err = s.openDB(ctx)
 	if err != nil {
