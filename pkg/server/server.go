@@ -67,7 +67,7 @@ func NewServer(c *config.Config) (*Server, error) {
 	switch c.SchemaStore.Type {
 	case config.StoreTypePersistent:
 		var err error
-		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path, c.SchemaStore.Cache)
+		s.schemaStore, err = persiststore.New(ctx, c.SchemaStore.Path, c.SchemaStore.Cache, c.SchemaStore.ReadOnly)
 		if err != nil {
 			return nil, err
 		}
