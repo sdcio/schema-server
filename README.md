@@ -59,3 +59,9 @@ bin/schemac schema upload --name sros --version 22.10 --vendor Nokia \
 --file lab/common/yang/sros_22.10/YANG/nokia-combined/ \
 --dir lab/common/yang/sros_22.10/YANG
 ```
+
+## License and Code of Conduct
+
+Code is under the [Apache License 2.0](LICENSE), documentation is [CC BY 4.0](LICENSE-documentation).
+
+The SDC project is following the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/main/code-of-conduct.md). More information and links about the CNCF Code of Conduct are [here](code-of-conduct.md).
