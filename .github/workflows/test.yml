@@ -22,6 +22,9 @@ on:
       - "main"
       - "!releases/**"
 
+permissions:
+  packages: write
+
 jobs:
   test:
     runs-on: ubuntu-22.04
