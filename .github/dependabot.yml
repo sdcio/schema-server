@@ -14,19 +14,21 @@
 
 version: 2
 updates:
-  -   package-ecosystem: "github-actions"
+    - package-ecosystem: "github-actions"
       directory: "/"
       schedule:
           interval: "weekly"
       groups:
-        github-actions:
-            patterns:
-                - "*"
-  -   package-ecosystem: "gomod"
+          github-actions:
+              patterns:
+                  - "*"
+    - package-ecosystem: "gomod"
       directory: "/"
       schedule:
           interval: "weekly"
       groups:
-        go-dependencies:
-            patterns:
-                - "*"
+          go-dependencies:
+              patterns:
+                  - "*"
+              exclude-patterns:
+                  - "sigs.k8s.io/controller-runtime"
