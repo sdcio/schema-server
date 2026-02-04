@@ -13,10 +13,10 @@ require (
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
 	github.com/jellydator/ttlcache/v3 v3.4.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/olekukonko/tablewriter v1.1.2
+	github.com/olekukonko/tablewriter v1.1.3
 	github.com/openconfig/goyang v1.6.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/sdcio/sdc-protos v0.0.49
+	github.com/sdcio/sdc-protos v0.0.50
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.78.0
@@ -28,14 +28,14 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/clipperhouse/displaywidth v0.6.0 // indirect
+	github.com/clipperhouse/displaywidth v0.6.2 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgraph-io/ristretto/v2 v2.2.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
-	github.com/fatih/color v1.15.0 // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -52,15 +52,15 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/olekukonko/cat v0.0.0-20250911104152-50322a0618f6 // indirect
 	github.com/olekukonko/errors v1.1.0 // indirect
-	github.com/olekukonko/ll v0.1.3 // indirect
+	github.com/olekukonko/ll v0.1.4-0.20260115111900-9e59c2286df0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.66.1 // indirect
