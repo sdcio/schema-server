@@ -70,6 +70,21 @@ func (sc *Schema) buildReferences(e *yang.Entry) error {
 			return err
 		}
 	}
+	// also recurse into augmented children
+	for _, ce := range e.Augmented {
+		if ce.IsCase() || ce.IsChoice() {
+			for _, cce := range ce.Dir {
+				err := sc.buildReferences(cce)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		err := sc.buildReferences(ce)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

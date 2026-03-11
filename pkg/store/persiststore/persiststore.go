@@ -733,6 +733,8 @@ func getModules(txn *badger.Txn, sc store.SchemaKey) ([]string, error) {
 
 func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest, sck store.SchemaKey) (*sdcpb.GetSchemaResponse, error) {
 	pes := utils.ToStrings(req.GetPath(), false, true)
+	log.Debugf("[persiststore][getSchema] raw path elems=%v", pes)
+
 	cKey := cacheKey{
 		SchemaKey: sck,
 		Path:      strings.Join(pes, "/"),
@@ -750,92 +752,104 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 			return rsp, nil
 		}
 	}
+
 	var err error
 	sce := new(sdcpb.SchemaElem)
+	var modules []string
 
-	// key all i.e "root"
-	if lpes := len(pes); lpes == 0 || (lpes == 1 && pes[0] == "") {
-		err = s.db.View(func(txn *badger.Txn) error {
+	origin := req.GetPath().GetOrigin()
+
+	// Root schema
+	if len(pes) == 0 || (len(pes) == 1 && pes[0] == "") {
+		var sce sdcpb.SchemaElem
+		err := s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
 			if err != nil {
 				return err
 			}
-			if item == nil {
-				return ErrKeyNotFound
-			}
 			v, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
 			}
-			err = proto.Unmarshal(v, sce)
-			if err != nil {
-				return err
-			}
-			return nil
+			return proto.Unmarshal(v, &sce)
 		})
 		if err != nil {
 			return nil, err
 		}
-		return &sdcpb.GetSchemaResponse{Schema: sce}, nil
+		return &sdcpb.GetSchemaResponse{Schema: &sce}, nil
 	}
-	moduleName := ""
-	if index := strings.Index(pes[0], ":"); index > 0 {
-		moduleName = pes[0][:index]
-		pes[0] = pes[0][index+1:]
+
+	// Parse per-element prefixes and build unprefixed names
+	pp := parsePathElems(pes)
+	names := make([]string, 0, len(pp))
+	for _, pe := range pp {
+		names = append(names, pe.name)
 	}
-	var modules []string
-	// path has module prefix
-	if moduleName != "" {
-		modules = []string{moduleName}
-	} else {
-		// path does not have module prefix
-		modules, err = s.getModules(sck)
-		if err != nil {
-			return nil, err
+
+	// Apply gNMI origin as module hint on first element (if present)
+	if origin != "" && len(pp) > 0 && pp[0].module == "" {
+		pp[0].module = origin
+	}
+
+	log.Debugf("[persiststore][getSchema] parsed path elems=%+v", pp)
+
+	// Validate first element's module prefix if present
+	// Note: non-first element prefixes can refer to augmented modules not in root list
+	allModules, err := s.getModules(sck)
+	if err != nil {
+		return nil, err
+	}
+	if len(pp) > 0 && pp[0].module != "" {
+		modSet := make(map[string]struct{}, len(allModules))
+		for _, m := range allModules {
+			modSet[m] = struct{}{}
 		}
+		if _, ok := modSet[pp[0].module]; !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown module prefix %q", pp[0].module)
+		}
+		if pp[0].name == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "empty identifier after prefix %q", pp[0].module)
+		}
+	}
+
+	// Decide candidate modules: use first element's module if present, else try all
+	if len(pp) > 0 && pp[0].module != "" {
+		modules = []string{pp[0].module}
+	} else {
+		// Prefer modules in a stable, deprioritized order
+		modules = append(modules, allModules...)
 		sort.Slice(modules, func(i, j int) bool {
 			return utils.SortModulesAB(modules[i], modules[j], config.DeprioritizedModules)
 		})
 	}
 
-	npe := make([]string, 1+len(pes))
-	copy(npe[1:], pes)
 	err = s.db.View(func(txn *badger.Txn) error {
 		for _, module := range modules {
-			var k []byte
-			if npe[1] == module { // query module name
-				k = buildEntryKey(sck, npe[1:])
-			} else {
-				npe[0] = module
-				k = buildEntryKey(sck, npe)
-			}
+			keyPath := make([]string, 0, 1+len(names))
+			keyPath = append(keyPath, module)
+			keyPath = append(keyPath, names...)
+			k := buildEntryKey(sck, keyPath)
+
 			item, err := txn.Get(k)
-			if err != nil {
-				continue
-			}
-			if item == nil {
+			if err != nil || item == nil {
 				continue
 			}
 			v, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
 			}
-			err = proto.Unmarshal(v, sce)
-			if err != nil {
+			if err := proto.Unmarshal(v, sce); err != nil {
 				return err
 			}
 			return nil
 		}
-		return fmt.Errorf("%s: %w", req.GetPath(), ErrKeyNotFound)
+		return fmt.Errorf("schema path not found: %s", req.GetPath())
 	})
 	if err != nil {
 		return nil, err
 	}
-	rsp := &sdcpb.GetSchemaResponse{Schema: sce}
-	if s.cache != nil {
-		s.cache.Set(cKey, rsp, ttlcache.DefaultTTL)
-	}
+
 	return &sdcpb.GetSchemaResponse{Schema: sce}, nil
 }
 
