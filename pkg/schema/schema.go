@@ -141,14 +141,28 @@ func (s *Schema) Walk(e *yang.Entry, fn func(ec *yang.Entry) error) error {
 				return err
 			}
 		}
+		// also walk augments merged into this entry
+		for _, ee := range e.Augmented {
+			err = s.Walk(ee, fn)
+			if err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 	err = fn(e)
 	if err != nil {
 		return err
 	}
-	for _, e := range e.Dir {
-		err = s.Walk(e, fn)
+	for _, ce := range e.Dir {
+		err = s.Walk(ce, fn)
+		if err != nil {
+			return err
+		}
+	}
+	// include augmented children at every level
+	for _, ce := range e.Augmented {
+		err = s.Walk(ce, fn)
 		if err != nil {
 			return err
 		}
