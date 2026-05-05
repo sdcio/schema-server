@@ -16,6 +16,7 @@ package schema
 
 import (
 	"cmp"
+	"fmt"
 	"slices"
 	"strings"
 
@@ -145,7 +146,7 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 		normalizedPath := normalizePath(yt.Path, e)
 		leafSchemaEntry, err := sc.GetEntry(normalizedPath)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("leafref %q normalized to %v: %w", yt.Path, normalizedPath, err)
 		}
 		slt.LeafrefTargetType, err = sc.toSchemaType(leafSchemaEntry, leafSchemaEntry.Type)
 		if err != nil {
