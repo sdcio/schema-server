@@ -1,0 +1,41 @@
+module lrc {
+    yang-version 1.1;
+    namespace "urn:lrc";
+    prefix "lrc";
+
+    // Reproduces the OcNOS leafref-under-choice/case failure pattern.
+    // A leaf with a relative leafref sits inside a list that is nested
+    // under a choice/case hierarchy.  The ancestor-prepend loop in
+    // relativeToAbsPath must skip choice and case structural nodes so
+    // that GetEntry can resolve the target using data-tree semantics.
+    container host {
+        choice detail-choice {
+            case variant-a {
+                list detail-list {
+                    key "id";
+                    leaf id {
+                        type string;
+                    }
+                    // source-id is the leafref target.
+                    leaf source-id {
+                        type string;
+                    }
+                    // ref-id's leafref goes up one level (to detail-list),
+                    // then descends to source-id.  Without the fix the
+                    // ancestor walk prepends "variant-a" and "detail-choice",
+                    // producing a path that GetEntry cannot resolve.
+                    leaf ref-id {
+                        type leafref {
+                            path "../source-id";
+                        }
+                    }
+                }
+            }
+            case variant-b {
+                leaf other-leaf {
+                    type string;
+                }
+            }
+        }
+    }
+}

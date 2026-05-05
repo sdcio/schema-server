@@ -1,0 +1,20 @@
+module bad-leafref {
+    yang-version 1.1;
+    namespace "urn:bad-leafref";
+    prefix "blr";
+
+    // This module intentionally contains a leafref pointing to a
+    // non-existent target.  It is used to test that buildReferences()
+    // returns an error that carries both the original path text and the
+    // normalized path elements so callers can produce actionable messages.
+    container host {
+        leaf id {
+            type string;
+        }
+        leaf broken-ref {
+            type leafref {
+                path "../nonexistent-target";
+            }
+        }
+    }
+}
