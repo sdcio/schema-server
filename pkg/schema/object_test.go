@@ -523,6 +523,76 @@ func comparePaths(p1, p2 *sdcpb.Path) bool {
 	return true
 }
 
+// TestSchema_LeafrefUnderChoiceCase is the tracer-bullet integration test for
+// SS-LR-01.  It loads a synthetic fixture that reproduces the OcNOS failure
+// pattern: a relative leafref inside a list nested under choice/case.
+// NewSchema must succeed (buildReferencesAnnotation must not error), and
+// GetEntry must resolve the leafref target without error.
+func TestSchema_LeafrefUnderChoiceCase(t *testing.T) {
+	cfg := &config.SchemaConfig{
+		Name:        "leafref-under-choice",
+		Vendor:      "test",
+		Version:     "0.0.0",
+		Files:       []string{"testdata/leafref-under-choice"},
+		Directories: []string{},
+		Excludes:    []string{},
+	}
+
+	sc, err := NewSchema(cfg)
+	if err != nil {
+		t.Fatalf("NewSchema() returned unexpected error: %v", err)
+	}
+
+	// The leafref on detail-list/ref-id points to detail-list/source-id.
+	// After the fix, GetEntry must resolve this effective data-tree path.
+	_, err = sc.GetEntry([]string{"host", "detail-list", "source-id"})
+	if err != nil {
+		t.Errorf("GetEntry(host/detail-list/source-id) returned unexpected error: %v", err)
+	}
+}
+
+// TestSchema_LeafrefAnnotationOnTarget verifies SS-LR-04:
+// After schema loading, the resolved leafref target (source-id) must carry a
+// REF_ annotation whose key ends with the path of the source leafref (ref-id).
+// The GetEntry lookup uses effective data-tree path elements only
+// (choice/case labels must be absent).
+func TestSchema_LeafrefAnnotationOnTarget(t *testing.T) {
+	cfg := &config.SchemaConfig{
+		Name:        "leafref-under-choice",
+		Vendor:      "test",
+		Version:     "0.0.0",
+		Files:       []string{"testdata/leafref-under-choice"},
+		Directories: []string{},
+		Excludes:    []string{},
+	}
+
+	sc, err := NewSchema(cfg)
+	if err != nil {
+		t.Fatalf("NewSchema() returned unexpected error: %v", err)
+	}
+
+	// Resolve the target leaf via its effective data-tree path (no choice/case labels).
+	targetEntry, err := sc.GetEntry([]string{"host", "detail-list", "source-id"})
+	if err != nil {
+		t.Fatalf("GetEntry(host/detail-list/source-id) unexpected error: %v", err)
+	}
+
+	// buildReferencesAnnotation must have placed at least one REF_ key on this entry.
+	if len(targetEntry.Annotation) == 0 {
+		t.Fatal("target entry source-id has no annotations; expected at least one REF_ entry")
+	}
+	foundREF := false
+	for k := range targetEntry.Annotation {
+		if len(k) >= 4 && k[:4] == "REF_" {
+			foundREF = true
+			break
+		}
+	}
+	if !foundREF {
+		t.Errorf("no REF_ annotation found on source-id; got annotations: %v", targetEntry.Annotation)
+	}
+}
+
 func Test_getChildren(t *testing.T) {
 	type args struct {
 		e *yang.Entry

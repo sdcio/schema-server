@@ -15,6 +15,7 @@
 package schema
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -48,7 +49,7 @@ func (sc *Schema) buildReferences(e *yang.Entry) error {
 		// fmt.Println("normalized path:", pes)
 		refEntry, err := sc.GetEntry(pes)
 		if err != nil {
-			return err
+			return fmt.Errorf("leafref %q normalized to %v: %w", e.Type.Path, pes, err)
 		}
 		// fmt.Println("got refEntry", refEntry.Name)
 		if refEntry.Annotation == nil {
@@ -170,7 +171,9 @@ func relativeToAbsPath(p *sdcpb.Path, e *yang.Entry) *sdcpb.Path {
 		return np
 	}
 	for ce != nil && ce.Parent != nil && ce.Parent.Name != RootName {
-		np.Elem = append([]*sdcpb.PathElem{{Name: ce.Name}}, np.GetElem()...)
+		if !ce.IsChoice() && !ce.IsCase() {
+			np.Elem = append([]*sdcpb.PathElem{{Name: ce.Name}}, np.GetElem()...)
+		}
 		ce = ce.Parent
 	}
 	return np
