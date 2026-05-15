@@ -18,8 +18,10 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/jellydator/ttlcache/v3"
 	"github.com/sdcio/schema-server/pkg/config"
 	"github.com/sdcio/schema-server/pkg/schema"
 	"github.com/sdcio/schema-server/pkg/store"
@@ -43,6 +45,18 @@ func newTestStore(t *testing.T) *persistStore {
 	t.Cleanup(func() { _ = db.Close() })
 
 	return &persistStore{db: db}
+}
+
+func newTestStoreWithCache(t *testing.T) *persistStore {
+	t.Helper()
+	ps := newTestStore(t)
+	ps.cache = ttlcache.New[cacheKey, *sdcpb.GetSchemaResponse](
+		ttlcache.WithTTL[cacheKey, *sdcpb.GetSchemaResponse](time.Minute),
+		ttlcache.WithCapacity[cacheKey, *sdcpb.GetSchemaResponse](128),
+	)
+	go ps.cache.Start()
+	t.Cleanup(func() { ps.cache.Stop() })
+	return ps
 }
 
 func testSchemaKey() store.SchemaKey {
@@ -280,5 +294,55 @@ func TestGetSchema_ModulePrefixedPathResolves(t *testing.T) {
 	got := rsp.GetSchema().GetContainer().GetName()
 	if got != "network-instances" {
 		t.Fatalf("unexpected schema name: %q", got)
+	}
+}
+
+// TestGetSchema_CacheKeyIncludesOrigin ensures the TTL cache distinguishes requests that
+// differ only by gNMI Path.origin (module hint); otherwise the second call would hit
+// the first resolution and return the wrong SchemaElem.
+func TestGetSchema_CacheKeyIncludesOrigin(t *testing.T) {
+	ps := newTestStoreWithCache(t)
+	sk := testSchemaKey()
+	insertSchemaMeta(t, ps, sk)
+	insertRootEntry(t, ps, sk, []string{"modA", "modB"})
+	insertEntry(t, ps, sk, []string{"modA", "dup"}, &sdcpb.SchemaElem{
+		Schema: &sdcpb.SchemaElem_Container{Container: &sdcpb.ContainerSchema{Name: "from-a"}},
+	})
+	insertEntry(t, ps, sk, []string{"modB", "dup"}, &sdcpb.SchemaElem{
+		Schema: &sdcpb.SchemaElem_Container{Container: &sdcpb.ContainerSchema{Name: "from-b"}},
+	})
+
+	path := &sdcpb.Path{Elem: []*sdcpb.PathElem{{Name: "dup"}}}
+	rspA, err := ps.GetSchema(context.Background(), &sdcpb.GetSchemaRequest{
+		Schema: &sdcpb.Schema{Name: sk.Name, Vendor: sk.Vendor, Version: sk.Version},
+		Path:   &sdcpb.Path{Origin: "modA", Elem: path.Elem},
+	})
+	if err != nil {
+		t.Fatalf("GetSchema modA: %v", err)
+	}
+	if rspA.GetSchema().GetContainer().GetName() != "from-a" {
+		t.Fatalf("modA: got %q", rspA.GetSchema().GetContainer().GetName())
+	}
+
+	rspB, err := ps.GetSchema(context.Background(), &sdcpb.GetSchemaRequest{
+		Schema: &sdcpb.Schema{Name: sk.Name, Vendor: sk.Vendor, Version: sk.Version},
+		Path:   &sdcpb.Path{Origin: "modB", Elem: path.Elem},
+	})
+	if err != nil {
+		t.Fatalf("GetSchema modB: %v", err)
+	}
+	if rspB.GetSchema().GetContainer().GetName() != "from-b" {
+		t.Fatalf("modB: got %q, want from-b (cache likely ignored origin)", rspB.GetSchema().GetContainer().GetName())
+	}
+
+	rspArev, err := ps.GetSchema(context.Background(), &sdcpb.GetSchemaRequest{
+		Schema: &sdcpb.Schema{Name: sk.Name, Vendor: sk.Vendor, Version: sk.Version},
+		Path:   &sdcpb.Path{Origin: "modA", Elem: path.Elem},
+	})
+	if err != nil {
+		t.Fatalf("GetSchema modA again: %v", err)
+	}
+	if rspArev.GetSchema().GetContainer().GetName() != "from-a" {
+		t.Fatalf("modA revisit: got %q", rspArev.GetSchema().GetContainer().GetName())
 	}
 }

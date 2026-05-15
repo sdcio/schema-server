@@ -54,7 +54,8 @@ var (
 
 type cacheKey struct {
 	store.SchemaKey
-	Path string
+	Path   string
+	Origin string
 }
 
 type persistStore struct {
@@ -747,9 +748,11 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 	pes := utils.ToStrings(req.GetPath(), false, true)
 	log.Debugf("[persiststore][getSchema] raw path elems=%v", pes)
 
+	origin := req.GetPath().GetOrigin()
 	cKey := cacheKey{
 		SchemaKey: sck,
 		Path:      strings.Join(pes, "/"),
+		Origin:    origin,
 	}
 	if s.cache != nil {
 		if item := s.cache.Get(cKey, ttlcache.WithDisableTouchOnHit[cacheKey, *sdcpb.GetSchemaResponse]()); item != nil {
@@ -768,8 +771,6 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 	var err error
 	sce := new(sdcpb.SchemaElem)
 	var modules []string
-
-	origin := req.GetPath().GetOrigin()
 
 	// Root schema
 	if len(pes) == 0 || (len(pes) == 1 && pes[0] == "") {
