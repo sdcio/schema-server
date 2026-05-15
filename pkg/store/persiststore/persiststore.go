@@ -761,7 +761,6 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 
 	// Root schema
 	if len(pes) == 0 || (len(pes) == 1 && pes[0] == "") {
-		sce = new(sdcpb.SchemaElem)
 		err := s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
