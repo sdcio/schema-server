@@ -15,6 +15,7 @@
 package schema
 
 import (
+	"path/filepath"
 	"reflect"
 	"sort"
 	"testing"
@@ -473,6 +474,46 @@ func TestSchema_BuildPath(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestSchema_BuildPath_AugmentedUnderCase(t *testing.T) {
+	td := filepath.Join("testdata", "buildpath-augment")
+	sc, err := NewSchema(&config.SchemaConfig{
+		Name:    "bpcc",
+		Vendor:  "test",
+		Version: "0",
+		Files: []string{
+			filepath.Join(td, "bpcc-base.yang"),
+			filepath.Join(td, "bpcc-aug.yang"),
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewSchema: %v", err)
+	}
+	p := &sdcpb.Path{}
+	err = sc.BuildPath([]string{"bpcc-base:top", "augment-leaf"}, p)
+	if err != nil {
+		t.Fatalf("BuildPath: %v", err)
+	}
+	want := &sdcpb.Path{Elem: []*sdcpb.PathElem{
+		{Name: "bpcc-base:top"},
+		{Name: "augment-leaf"},
+	}}
+	if !comparePaths(p, want) {
+		t.Fatalf("got %v want %v", p, want)
+	}
+
+	p2 := &sdcpb.Path{}
+	if err := sc.BuildPath([]string{"bpcc-base:top", "leaf-a"}, p2); err != nil {
+		t.Fatalf("BuildPath native leaf under case: %v", err)
+	}
+	want2 := &sdcpb.Path{Elem: []*sdcpb.PathElem{
+		{Name: "bpcc-base:top"},
+		{Name: "leaf-a"},
+	}}
+	if !comparePaths(p2, want2) {
+		t.Fatalf("native choice path got %v want %v", p2, want2)
 	}
 }
 

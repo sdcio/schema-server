@@ -1,0 +1,23 @@
+module bpcc-base {
+  yang-version 1.1;
+  namespace "urn:bpcc:base";
+  prefix bcb;
+
+  organization "schema-server test";
+  description "Base module: choice/case for BuildPath augment tests";
+
+  container top {
+    choice variant {
+      case case-a {
+        leaf leaf-a {
+          type string;
+        }
+      }
+      case case-b {
+        leaf leaf-b {
+          type string;
+        }
+      }
+    }
+  }
+}

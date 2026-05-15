@@ -1,0 +1,18 @@
+module bpcc-aug {
+  yang-version 1.1;
+  namespace "urn:bpcc:aug";
+  prefix bcx;
+
+  import bpcc-base {
+    prefix bcb;
+  }
+
+  organization "schema-server test";
+  description "Augment-only leaf under case-a";
+
+  augment "/bcb:top/bcb:variant/bcb:case-a" {
+    leaf augment-leaf {
+      type string;
+    }
+  }
+}
