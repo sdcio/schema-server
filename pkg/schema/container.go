@@ -108,6 +108,16 @@ func getMandatoryChildren(e *yang.Entry) []*sdcpb.MandatoryChild {
 			result = append(result, c)
 		}
 	}
+	// include mandatory children from augments
+	for _, v := range e.Augmented {
+		if v.Mandatory == yang.TSTrue {
+			c := &sdcpb.MandatoryChild{
+				Name:    v.Name,
+				IsState: isState(v),
+			}
+			result = append(result, c)
+		}
+	}
 	return result
 }
 
@@ -155,6 +165,16 @@ func getChoiceInfo(e *yang.Entry) *sdcpb.ChoiceInfo {
 			}
 		}
 
+		processChoice(de, ci)
+	}
+	// also consider choices introduced via augments
+	for _, de := range e.Augmented {
+		if !de.IsChoice() {
+			continue
+		}
+		if ci == nil {
+			ci = &sdcpb.ChoiceInfo{Choice: map[string]*sdcpb.ChoiceInfoChoice{}}
+		}
 		processChoice(de, ci)
 	}
 	return ci
