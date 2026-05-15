@@ -849,7 +849,10 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 	if err != nil {
 		return nil, err
 	}
-
+	rsp := &sdcpb.GetSchemaResponse{Schema: sce}
+	if s.cache != nil {
+		s.cache.Set(cKey, rsp, ttlcache.DefaultTTL)
+	}
 	return &sdcpb.GetSchemaResponse{Schema: sce}, nil
 }
 
