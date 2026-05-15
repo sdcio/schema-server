@@ -761,7 +761,7 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 
 	// Root schema
 	if len(pes) == 0 || (len(pes) == 1 && pes[0] == "") {
-		var sce sdcpb.SchemaElem
+		sce = new(sdcpb.SchemaElem)
 		err := s.db.View(func(txn *badger.Txn) error {
 			k := buildEntryKey(sck, []string{schema.RootName})
 			item, err := txn.Get(k)
@@ -772,12 +772,16 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 			if err != nil {
 				return err
 			}
-			return proto.Unmarshal(v, &sce)
+			return proto.Unmarshal(v, sce)
 		})
 		if err != nil {
 			return nil, err
 		}
-		return &sdcpb.GetSchemaResponse{Schema: &sce}, nil
+		rsp := &sdcpb.GetSchemaResponse{Schema: sce}
+		if s.cache != nil {
+			s.cache.Set(cKey, rsp, ttlcache.DefaultTTL)
+		}
+		return rsp, nil
 	}
 
 	// Parse per-element prefixes and build unprefixed names
@@ -853,7 +857,7 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 	if s.cache != nil {
 		s.cache.Set(cKey, rsp, ttlcache.DefaultTTL)
 	}
-	return &sdcpb.GetSchemaResponse{Schema: sce}, nil
+	return rsp, nil
 }
 
 func removeDescription(rsp *sdcpb.GetSchemaResponse) *sdcpb.GetSchemaResponse {
