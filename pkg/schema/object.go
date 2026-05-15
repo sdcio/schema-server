@@ -190,8 +190,7 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 
 			// prefix will be in [0] if exists, so path will always be in last index
 			// compare name without prefix
-			pathElements := strings.SplitN(pe[0], ":", 2)
-			if ee.Name != pathElements[len(pathElements)-1] {
+			if ee.Name != pathElemLocalName(pe[0]) {
 				continue
 			}
 			return getEntry(ee, pe[1:])
@@ -199,6 +198,13 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 		// fmt.Println("entry name", e.Name, pe)
 		return nil, fmt.Errorf("%q not a child entry of %v", pe[0], e.Name)
 	}
+}
+
+// pathElemLocalName returns the YANG identifier after an optional single "prefix:".
+// It matches the name comparison rule used in getEntry for prefixed path elements.
+func pathElemLocalName(s string) string {
+	parts := strings.SplitN(s, ":", 2)
+	return parts[len(parts)-1]
 }
 
 // entryChildByName returns a direct child of parent by name, checking Dir then Augmented.
@@ -237,7 +243,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 		if e == nil {
 			return fmt.Errorf("module %q not found", first)
 		}
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pathElemLocalName(pe[0])); ee != nil {
 			err := sc.buildPath(pe, p, ee)
 			if err != nil {
 				return err
@@ -250,7 +256,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	}
 	// try children
 	for _, e := range sc.root.Dir {
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pathElemLocalName(pe[0])); ee != nil {
 			return sc.buildPath(pe, p, ee)
 		}
 	}

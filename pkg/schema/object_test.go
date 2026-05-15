@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -514,6 +515,46 @@ func TestSchema_BuildPath_AugmentedUnderCase(t *testing.T) {
 	}}
 	if !comparePaths(p2, want2) {
 		t.Fatalf("native choice path got %v want %v", p2, want2)
+	}
+}
+
+// TestSchema_BuildPath_bootstrapAugmentedFirstHop verifies BuildPath resolves the
+// first in-module segment using the same Dir+Augmented lookup as buildPath
+// (regression: bootstrap used e.Dir[pe[0]] only).
+func TestSchema_BuildPath_bootstrapAugmentedFirstHop(t *testing.T) {
+	augLeaf := &yang.Entry{
+		Name:   "aug-only",
+		Kind:   yang.LeafEntry,
+		Type:   &yang.YangType{Kind: yang.Ystring},
+		Prefix: &yang.Value{Name: "pfx"},
+	}
+	mod := &yang.Entry{
+		Name:      "testmod",
+		Kind:      yang.DirectoryEntry,
+		Dir:       map[string]*yang.Entry{},
+		Augmented: []*yang.Entry{augLeaf},
+		Prefix:    &yang.Value{Name: "pfx"},
+	}
+	augLeaf.Parent = mod
+	root := &yang.Entry{
+		Name: RootName,
+		Kind: yang.DirectoryEntry,
+		Dir:  map[string]*yang.Entry{"testmod": mod},
+	}
+	sc := &Schema{
+		root:   root,
+		config: &config.SchemaConfig{Name: "t", Vendor: "t", Version: "0"},
+		m:      new(sync.RWMutex),
+	}
+	p := &sdcpb.Path{}
+	if err := sc.BuildPath([]string{"testmod:aug-only"}, p); err != nil {
+		t.Fatalf("BuildPath: %v", err)
+	}
+	want := &sdcpb.Path{Elem: []*sdcpb.PathElem{
+		{Name: "testmod:aug-only"},
+	}}
+	if !comparePaths(p, want) {
+		t.Fatalf("got %v want %v", p, want)
 	}
 }
 
