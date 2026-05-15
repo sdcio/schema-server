@@ -17,6 +17,7 @@ package memstore
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/openconfig/goyang/pkg/yang"
@@ -43,6 +44,18 @@ func New() store.Store {
 	}
 }
 
+func pathStringsForGetSchema(req *sdcpb.GetSchemaRequest) []string {
+	pes := utils.ToStrings(req.GetPath(), false, true)
+	// Match persiststore: gNMI Path.origin acts as a module hint for the first path
+	// element when that element has no embedded "module:name" prefix.
+	if p := req.GetPath(); p != nil && p.GetOrigin() != "" && len(pes) > 0 {
+		if !strings.Contains(pes[0], ":") {
+			pes = append([]string{p.GetOrigin() + ":" + pes[0]}, pes[1:]...)
+		}
+	}
+	return pes
+}
+
 func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
 	s.ms.RLock()
 	defer s.ms.RUnlock()
@@ -50,7 +63,7 @@ func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (
 	if reqSchema == nil {
 		return nil, status.Error(codes.InvalidArgument, "missing schema details")
 	}
-	pes := utils.ToStrings(req.GetPath(), false, true)
+	pes := pathStringsForGetSchema(req)
 
 	sc, ok := s.schemas[store.SchemaKey{Name: reqSchema.Name, Vendor: reqSchema.Vendor, Version: reqSchema.Version}]
 	if !ok {
@@ -309,7 +322,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	pes := utils.ToStrings(req.GetPath(), false, true)
+	pes := pathStringsForGetSchema(req)
 
 	sch := make(chan *sdcpb.SchemaElem)
 	ych := make(chan *yang.Entry)

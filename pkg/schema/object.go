@@ -120,7 +120,7 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 	case e.Node == nil:
 		entries := make([]*yang.Entry, 0)
 		for _, entry := range sc.root.Dir {
-			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
+			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix || entry.Name == prefix) {
 				entries = append(entries, entry)
 			}
 		}
