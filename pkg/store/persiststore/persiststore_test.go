@@ -16,9 +16,11 @@ package persiststore
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/dgraph-io/badger/v4"
+	"github.com/sdcio/schema-server/pkg/config"
 	"github.com/sdcio/schema-server/pkg/schema"
 	"github.com/sdcio/schema-server/pkg/store"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
@@ -221,6 +223,42 @@ func TestGetSchema_ModuleLessPathResolves(t *testing.T) {
 	got := rsp.GetSchema().GetContainer().GetName()
 	if got != "network-instances" {
 		t.Fatalf("unexpected schema name: %q", got)
+	}
+}
+
+func TestAddSchema_PersistsAugmentOnlyChildren(t *testing.T) {
+	td := filepath.Join("testdata", "augment")
+	base := filepath.Join(td, "aug-base.yang")
+	extra := filepath.Join(td, "aug-extra.yang")
+
+	sc, err := schema.NewSchema(&config.SchemaConfig{
+		Name:    "augment-persist",
+		Vendor:  "test",
+		Version: "0",
+		Files:   []string{base, extra},
+	})
+	if err != nil {
+		t.Fatalf("NewSchema: %v", err)
+	}
+
+	ps := newTestStore(t)
+	if err := ps.AddSchema(sc); err != nil {
+		t.Fatalf("AddSchema: %v", err)
+	}
+
+	// augment-only-leaf exists only under target via aug-extra; must be readable from Badger after Reset.
+	rsp, err := ps.GetSchema(context.Background(), &sdcpb.GetSchemaRequest{
+		Schema: &sdcpb.Schema{Name: sc.Name(), Vendor: sc.Vendor(), Version: sc.Version()},
+		Path: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+			{Name: "target"},
+			{Name: "augment-only-leaf"},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("GetSchema augment-only path: %v", err)
+	}
+	if rsp.GetSchema().GetField().GetName() != "augment-only-leaf" {
+		t.Fatalf("expected field augment-only-leaf, got %#v", rsp.GetSchema())
 	}
 }
 

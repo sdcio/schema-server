@@ -577,6 +577,12 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 				return err
 			}
 		}
+		for _, ee := range e.Augmented {
+			err := s.addSchemaElem(wb, sc, ee)
+			if err != nil {
+				return err
+			}
+		}
 		return nil
 	}
 	// build entry key
@@ -595,8 +601,14 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 	if err != nil {
 		return err
 	}
-	// do the same for entry children
+	// do the same for entry children (native definitions and augment-only nodes)
 	for _, ee := range e.Dir {
+		err = s.addSchemaElem(wb, sc, ee)
+		if err != nil {
+			return err
+		}
+	}
+	for _, ee := range e.Augmented {
 		err = s.addSchemaElem(wb, sc, ee)
 		if err != nil {
 			return err
