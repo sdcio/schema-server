@@ -41,7 +41,7 @@ func (sc *Schema) ExpandPath(p *sdcpb.Path, dt sdcpb.DataType) ([]*sdcpb.Path, e
 	for _, k := range strings.Fields(e.Key) {
 		keys[k] = struct{}{}
 	}
-	for _, c := range e.Dir {
+	for _, c := range getChildren(e) {
 		// skip keys
 		if _, ok := keys[c.Name]; ok {
 			continue
@@ -109,7 +109,7 @@ func (sc *Schema) getPathElems(e *yang.Entry, dt sdcpb.DataType) [][]*sdcpb.Path
 			kmap[k] = struct{}{}
 		}
 
-		for _, c := range e.Dir {
+		for _, c := range getChildren(e) {
 			if _, ok := kmap[c.Name]; ok {
 				continue
 			}
@@ -126,7 +126,7 @@ func (sc *Schema) getPathElems(e *yang.Entry, dt sdcpb.DataType) [][]*sdcpb.Path
 	case e.IsContainer():
 		log.Debugf("got container: %s", e.Name)
 		containerPE := &sdcpb.PathElem{Name: e.Name, Key: make(map[string]string)}
-		for _, c := range e.Dir {
+		for _, c := range getChildren(e) {
 			log.Debugf("container parent adding child: %s", c.Name)
 			childrenPE := sc.getPathElems(c, dt)
 

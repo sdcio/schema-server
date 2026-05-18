@@ -1,0 +1,18 @@
+module aug-extra {
+  yang-version 1.1;
+  namespace "urn:augment:test:extra";
+  prefix ax;
+
+  import aug-base {
+    prefix ab;
+  }
+
+  organization "schema-server test";
+  description "Adds augment-only leaf under aug-base:target";
+
+  augment "/ab:target" {
+    leaf augment-only-leaf {
+      type string;
+    }
+  }
+}

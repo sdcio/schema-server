@@ -1,0 +1,15 @@
+module aug-base {
+  yang-version 1.1;
+  namespace "urn:augment:test:base";
+  prefix ab;
+
+  organization "schema-server test";
+  description "Base module for augment persistence test";
+
+  container target {
+    description "Augment target";
+    leaf native-leaf {
+      type string;
+    }
+  }
+}

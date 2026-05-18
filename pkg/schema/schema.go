@@ -147,8 +147,8 @@ func (s *Schema) Walk(e *yang.Entry, fn func(ec *yang.Entry) error) error {
 	if err != nil {
 		return err
 	}
-	for _, e := range e.Dir {
-		err = s.Walk(e, fn)
+	for _, ce := range e.Dir {
+		err = s.Walk(ce, fn)
 		if err != nil {
 			return err
 		}

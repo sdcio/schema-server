@@ -120,7 +120,7 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 	case e.Node == nil:
 		entries := make([]*yang.Entry, 0)
 		for _, entry := range sc.root.Dir {
-			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
+			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix || entry.Name == prefix) {
 				entries = append(entries, entry)
 			}
 		}
@@ -190,8 +190,7 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 
 			// prefix will be in [0] if exists, so path will always be in last index
 			// compare name without prefix
-			pathElements := strings.SplitN(pe[0], ":", 2)
-			if ee.Name != pathElements[len(pathElements)-1] {
+			if ee.Name != pathElemLocalName(pe[0]) {
 				continue
 			}
 			return getEntry(ee, pe[1:])
@@ -199,6 +198,22 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 		// fmt.Println("entry name", e.Name, pe)
 		return nil, fmt.Errorf("%q not a child entry of %v", pe[0], e.Name)
 	}
+}
+
+// pathElemLocalName returns the YANG identifier after an optional single "prefix:".
+// It matches the name comparison rule used in getEntry for prefixed path elements.
+func pathElemLocalName(s string) string {
+	parts := strings.SplitN(s, ":", 2)
+	return parts[len(parts)-1]
+}
+
+// entryChildByName returns a direct child of parent by name from Dir.
+// Goyang merges augment children into Dir; Augmented holds shallow augment-block copies only.
+func entryChildByName(parent *yang.Entry, name string) *yang.Entry {
+	if parent == nil {
+		return nil
+	}
+	return parent.Dir[name]
 }
 
 func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
@@ -221,7 +236,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 		if e == nil {
 			return fmt.Errorf("module %q not found", first)
 		}
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pathElemLocalName(pe[0])); ee != nil {
 			err := sc.buildPath(pe, p, ee)
 			if err != nil {
 				return err
@@ -234,7 +249,7 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	}
 	// try children
 	for _, e := range sc.root.Dir {
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pathElemLocalName(pe[0])); ee != nil {
 			return sc.buildPath(pe, p, ee)
 		}
 	}
@@ -281,7 +296,7 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 			return nil
 		}
 		nxt := pe[count]
-		if ee, ok := e.Dir[nxt]; ok {
+		if ee := entryChildByName(e, nxt); ee != nil {
 			return sc.buildPath(pe[count:], p, ee)
 		}
 		// find choices/cases
@@ -291,45 +306,56 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		}
 		return sc.buildPath(pe[count:], p, ee)
 	case e.IsChoice():
-		p.Elem = append(p.Elem, cpe)
-		for _, entry := range e.Dir {
-			if entry.IsCase() {
-				if ee, ok := entry.Dir[pe[0]]; ok {
-					return sc.buildPath(pe[1:], p, ee)
+		{
+			tryChoiceChild := func(choice *yang.Entry, entry *yang.Entry) (handled bool, err error) {
+				if entry == nil {
+					return false, nil
 				}
-			} else {
-				if ee, ok := e.Dir[pe[0]]; ok {
-					return sc.buildPath(pe[1:], p, ee)
+				if entry.IsCase() {
+					if ee := entryChildByName(entry, pe[0]); ee != nil {
+						return true, sc.buildPath(pe[1:], p, ee)
+					}
+				} else {
+					if ee := entryChildByName(choice, pe[0]); ee != nil {
+						return true, sc.buildPath(pe[1:], p, ee)
+					}
+				}
+				return false, nil
+			}
+			p.Elem = append(p.Elem, cpe)
+			for _, entry := range e.Dir {
+				if handled, err := tryChoiceChild(e, entry); handled {
+					return err
 				}
 			}
+			return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
 		}
-		return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
 	case e.IsCase():
 		// RFC7950 7.9.2: A case node does not exist in the data tree.
 		// p.Elem = append(p.Elem, cpe)
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pe[0]); ee != nil {
 			return sc.buildPath(pe[1:], p, ee)
 		}
-		if ee, ok := e.Dir[e.Name]; ok {
+		if ee := entryChildByName(e, e.Name); ee != nil {
 			return sc.buildPath(pe, p, ee)
 		}
 		return fmt.Errorf("case %s - unknown element %s", e.Name, pe[0])
 	case e.IsContainer():
 		// implicit case: child with same name which is a choice
-		if ee, ok := e.Dir[pe[0]]; ee != nil && ok {
+		if ee := entryChildByName(e, pe[0]); ee != nil {
 			if ee.IsChoice() {
 				return sc.buildPath(pe[1:], p, ee)
 			}
 		}
 
 		p.Elem = append(p.Elem, cpe)
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee := entryChildByName(e, pe[0]); ee != nil {
 			return sc.buildPath(pe, p, ee)
 		}
 		if lpe == 1 {
 			return nil
 		}
-		if ee, ok := e.Dir[pe[1]]; ok {
+		if ee := entryChildByName(e, pe[1]); ee != nil {
 			return sc.buildPath(pe[1:], p, ee)
 		}
 		// find choice/case
@@ -562,21 +588,36 @@ func (sc *Schema) findChoiceCase(e *yang.Entry, pe []string) (*yang.Entry, error
 	if len(pe) == 0 {
 		return e, nil
 	}
-	for _, ee := range e.Dir {
-		if !ee.IsChoice() {
-			continue
+	// pe is expected to contain at least the current element name at index 0 and
+	// the sought child element name at index 1.
+	//
+	// This is used from container/list resolution paths where the next element may
+	// live under a choice/case. Case nodes do not exist in the data tree, so we
+	// must search through cases to find the actual schema node.
+	if len(pe) < 2 {
+		return nil, fmt.Errorf("unknown element %s", pe[0])
+	}
+
+	// scan choice nodes under e (goyang merges augmented choices into Dir)
+	choices := make([]*yang.Entry, 0)
+	for _, child := range e.Dir {
+		if child != nil && child.IsChoice() {
+			choices = append(choices, child)
 		}
-		if eee, ok := ee.Dir[pe[1]]; ok && !eee.IsCase() {
-			return eee, nil
+	}
+
+	for _, choice := range choices {
+		// implicit case: choice directly contains the data node
+		if direct := entryChildByName(choice, pe[1]); direct != nil && !direct.IsCase() {
+			return direct, nil
 		}
-		// assume there was a case obj,
-		// search one step deeper
-		for _, eee := range ee.Dir {
-			if !eee.IsCase() {
+		// explicit cases: the data node is under a case
+		for _, cc := range choice.Dir {
+			if cc == nil || !cc.IsCase() {
 				continue
 			}
-			if eeee, ok := eee.Dir[pe[1]]; ok {
-				return eeee, nil
+			if target := entryChildByName(cc, pe[1]); target != nil {
+				return target, nil
 			}
 		}
 	}
