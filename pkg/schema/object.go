@@ -182,7 +182,7 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 		}
 		return e, nil
 	default:
-		if e.Dir == nil && len(e.Augmented) == 0 {
+		if e.Dir == nil {
 			return nil, errors.New("not found")
 		}
 		for _, ee := range getChildren(e) {
@@ -207,20 +207,13 @@ func pathElemLocalName(s string) string {
 	return parts[len(parts)-1]
 }
 
-// entryChildByName returns a direct child of parent by name, checking Dir then Augmented.
+// entryChildByName returns a direct child of parent by name from Dir.
+// Goyang merges augment children into Dir; Augmented holds shallow augment-block copies only.
 func entryChildByName(parent *yang.Entry, name string) *yang.Entry {
 	if parent == nil {
 		return nil
 	}
-	if ce, ok := parent.Dir[name]; ok {
-		return ce
-	}
-	for _, ae := range parent.Augmented {
-		if ae != nil && ae.Name == name {
-			return ae
-		}
-	}
-	return nil
+	return parent.Dir[name]
 }
 
 func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
@@ -335,11 +328,6 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 					return err
 				}
 			}
-			for _, entry := range e.Augmented {
-				if handled, err := tryChoiceChild(e, entry); handled {
-					return err
-				}
-			}
 			return fmt.Errorf("choice %s - unknown element %s", e.Name, pe[0])
 		}
 	case e.IsCase():
@@ -397,16 +385,8 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 func getChildren(e *yang.Entry) []*yang.Entry {
 	switch {
 	case e.IsChoice(), e.IsCase(), e.IsContainer(), e.IsList():
-		rs := make([]*yang.Entry, 0, len(e.Dir)+len(e.Augmented))
+		rs := make([]*yang.Entry, 0, len(e.Dir))
 		for _, ee := range e.Dir {
-			if ee.IsChoice() || ee.IsCase() {
-				rs = append(rs, getChildren(ee)...)
-				continue
-			}
-			rs = append(rs, ee)
-		}
-		// add augmented children as well
-		for _, ee := range e.Augmented {
 			if ee.IsChoice() || ee.IsCase() {
 				rs = append(rs, getChildren(ee)...)
 				continue
@@ -618,14 +598,9 @@ func (sc *Schema) findChoiceCase(e *yang.Entry, pe []string) (*yang.Entry, error
 		return nil, fmt.Errorf("unknown element %s", pe[0])
 	}
 
-	// scan choice nodes in both direct and augmented children
+	// scan choice nodes under e (goyang merges augmented choices into Dir)
 	choices := make([]*yang.Entry, 0)
 	for _, child := range e.Dir {
-		if child != nil && child.IsChoice() {
-			choices = append(choices, child)
-		}
-	}
-	for _, child := range e.Augmented {
 		if child != nil && child.IsChoice() {
 			choices = append(choices, child)
 		}
@@ -638,14 +613,6 @@ func (sc *Schema) findChoiceCase(e *yang.Entry, pe []string) (*yang.Entry, error
 		}
 		// explicit cases: the data node is under a case
 		for _, cc := range choice.Dir {
-			if cc == nil || !cc.IsCase() {
-				continue
-			}
-			if target := entryChildByName(cc, pe[1]); target != nil {
-				return target, nil
-			}
-		}
-		for _, cc := range choice.Augmented {
 			if cc == nil || !cc.IsCase() {
 				continue
 			}

@@ -1,0 +1,11 @@
+module parity-has-data {
+  yang-version 1.1;
+  namespace "urn:test:parity:data";
+  prefix pdata;
+
+  container rootbox {
+    leaf a {
+      type string;
+    }
+  }
+}

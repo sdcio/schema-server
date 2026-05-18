@@ -518,10 +518,9 @@ func TestSchema_BuildPath_AugmentedUnderCase(t *testing.T) {
 	}
 }
 
-// TestSchema_BuildPath_bootstrapAugmentedFirstHop verifies BuildPath resolves the
-// first in-module segment using the same Dir+Augmented lookup as buildPath
-// (regression: bootstrap used e.Dir[pe[0]] only).
-func TestSchema_BuildPath_bootstrapAugmentedFirstHop(t *testing.T) {
+// TestSchema_BuildPath_bootstrapModuleChild verifies BuildPath resolves the first
+// in-module segment using Dir lookup on the module entry (goyang merges augments into Dir).
+func TestSchema_BuildPath_bootstrapModuleChild(t *testing.T) {
 	augLeaf := &yang.Entry{
 		Name:   "aug-only",
 		Kind:   yang.LeafEntry,
@@ -529,11 +528,10 @@ func TestSchema_BuildPath_bootstrapAugmentedFirstHop(t *testing.T) {
 		Prefix: &yang.Value{Name: "pfx"},
 	}
 	mod := &yang.Entry{
-		Name:      "testmod",
-		Kind:      yang.DirectoryEntry,
-		Dir:       map[string]*yang.Entry{},
-		Augmented: []*yang.Entry{augLeaf},
-		Prefix:    &yang.Value{Name: "pfx"},
+		Name:   "testmod",
+		Kind:   yang.DirectoryEntry,
+		Dir:    map[string]*yang.Entry{"aug-only": augLeaf},
+		Prefix: &yang.Value{Name: "pfx"},
 	}
 	augLeaf.Parent = mod
 	root := &yang.Entry{

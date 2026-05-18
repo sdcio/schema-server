@@ -130,6 +130,27 @@ func TestGetSchema_MemstoreParity_AugmentFixture(t *testing.T) {
 	}
 }
 
+func TestGetSchema_MemstoreParity_SingleSegmentModuleRoot_TypesOnlyModule(t *testing.T) {
+	td := filepath.Join("testdata", "module-root-parity")
+	cfg := &config.SchemaConfig{
+		Name:    "parity-module-root",
+		Vendor:  "test",
+		Version: "0",
+		Files: []string{
+			filepath.Join(td, "types-only.yang"),
+			filepath.Join(td, "has-data.yang"),
+		},
+	}
+	ms, ps, sk := newParityStores(t, cfg)
+
+	assertGetSchemaParity(t, ms, ps, sk, &sdcpb.GetSchemaRequest{
+		Schema: sk,
+		Path: &sdcpb.Path{Elem: []*sdcpb.PathElem{
+			{Name: "parity-types-only"},
+		}},
+	})
+}
+
 func TestGetSchema_MemstoreParity_OriginDisambiguatesDupTopLevel(t *testing.T) {
 	td := filepath.Join("testdata", "origin-dup")
 	cfg := &config.SchemaConfig{

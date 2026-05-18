@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -578,12 +579,6 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 				return err
 			}
 		}
-		for _, ee := range e.Augmented {
-			err := s.addSchemaElem(wb, sc, ee)
-			if err != nil {
-				return err
-			}
-		}
 		return nil
 	}
 	// build entry key
@@ -602,14 +597,8 @@ func (s *persistStore) addSchemaElem(wb *badger.WriteBatch, sc *schema.Schema, e
 	if err != nil {
 		return err
 	}
-	// do the same for entry children (native definitions and augment-only nodes)
+	// recurse into merged schema children (goyang places augment nodes in Dir)
 	for _, ee := range e.Dir {
-		err = s.addSchemaElem(wb, sc, ee)
-		if err != nil {
-			return err
-		}
-	}
-	for _, ee := range e.Augmented {
 		err = s.addSchemaElem(wb, sc, ee)
 		if err != nil {
 			return err
@@ -798,6 +787,9 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 
 	// Parse per-element prefixes and build unprefixed names
 	pp := parsePathElems(pes)
+	// If the first element is later scoped by origin or "mod:" prefix, do not fall back to
+	// module-root keys (would return the wrong module after a failed scoped lookup).
+	firstPathElemUnscoped := origin == "" && (len(pp) == 0 || pp[0].module == "")
 	names := make([]string, 0, len(pp))
 	for _, pe := range pp {
 		names = append(names, pe.name)
@@ -859,6 +851,22 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 				return err
 			}
 			return nil
+		}
+		// Single-segment path that is a compiled module name resolves to the module root
+		// entry (key buildEntryKey(sck, []string{module})), not [module, module] which the
+		// loop above probes. Memstore does this via Schema.GetEntry.
+		if firstPathElemUnscoped && len(names) == 1 && slices.Contains(allModules, names[0]) {
+			k := buildEntryKey(sck, []string{names[0]})
+			if item, err := txn.Get(k); err == nil && item != nil {
+				v, err := item.ValueCopy(nil)
+				if err != nil {
+					return err
+				}
+				if err := proto.Unmarshal(v, sce); err != nil {
+					return err
+				}
+				return nil
+			}
 		}
 		return fmt.Errorf("schema path not found: %s", req.GetPath())
 	})
