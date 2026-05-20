@@ -210,32 +210,50 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	if p.GetElem() == nil {
 		p.Elem = make([]*sdcpb.PathElem, 0, 1)
 	}
-	first := pe[0]
-	index := strings.Index(pe[0], ":")
-	if index > 0 {
-		first = pe[0][:index]
-		pe[0] = pe[0][index+1:]
+
+	// Strip module prefixes from ALL path elements
+	// Module prefixes like "srl_nokia-interfaces:interface" -> "interface"
+	cleanPe := make([]string, len(pe))
+	for i, elem := range pe {
+		if idx := strings.Index(elem, ":"); idx > 0 {
+			cleanPe[i] = elem[idx+1:]
+		} else {
+			cleanPe[i] = elem
+		}
 	}
+
+	// Check if first element had a module prefix
+	first := cleanPe[0]
+	originalFirst := pe[0]
+	hasModulePrefix := strings.Contains(originalFirst, ":")
+	var moduleName string
+	if hasModulePrefix {
+		moduleName = originalFirst[:strings.Index(originalFirst, ":")]
+	}
+
 	// try module
-	if e, ok := sc.root.Dir[first]; ok {
-		if e == nil {
-			return fmt.Errorf("module %q not found", first)
-		}
-		if ee, ok := e.Dir[pe[0]]; ok {
-			err := sc.buildPath(pe, p, ee)
-			if err != nil {
-				return err
+	if hasModulePrefix {
+		if e, ok := sc.root.Dir[moduleName]; ok {
+			if e == nil {
+				return fmt.Errorf("module %q not found", moduleName)
 			}
-			// add ns/prefix to the first elem
-			p.GetElem()[0].Name = first + ":" + p.GetElem()[0].GetName()
-			return nil
+			if ee, ok := e.Dir[first]; ok {
+				err := sc.buildPath(cleanPe, p, ee)
+				if err != nil {
+					return err
+				}
+				// add ns/prefix to the first elem
+				p.GetElem()[0].Name = moduleName + ":" + p.GetElem()[0].GetName()
+				return nil
+			}
+			return fmt.Errorf("elem %q not found in module %q", first, moduleName)
 		}
-		return fmt.Errorf("elem %q not found in module %q", pe[0], first)
 	}
-	// try children
+
+	// try children without module
 	for _, e := range sc.root.Dir {
-		if ee, ok := e.Dir[pe[0]]; ok {
-			return sc.buildPath(pe, p, ee)
+		if ee, ok := e.Dir[first]; ok {
+			return sc.buildPath(cleanPe, p, ee)
 		}
 	}
 
@@ -375,16 +393,8 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 func getChildren(e *yang.Entry) []*yang.Entry {
 	switch {
 	case e.IsChoice(), e.IsCase(), e.IsContainer(), e.IsList():
-		rs := make([]*yang.Entry, 0, len(e.Dir)+len(e.Augmented))
+		rs := make([]*yang.Entry, 0, len(e.Dir))
 		for _, ee := range e.Dir {
-			if ee.IsChoice() || ee.IsCase() {
-				rs = append(rs, getChildren(ee)...)
-				continue
-			}
-			rs = append(rs, ee)
-		}
-		// add augmented children as well
-		for _, ee := range e.Augmented {
 			if ee.IsChoice() || ee.IsCase() {
 				rs = append(rs, getChildren(ee)...)
 				continue
