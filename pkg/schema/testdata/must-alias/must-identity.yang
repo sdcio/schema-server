@@ -1,0 +1,15 @@
+module must-identity {
+  yang-version 1.1;
+  namespace "urn:test/must-identity";
+  prefix "must-id";
+
+  identity protocol-type;
+
+  identity BGP {
+    base protocol-type;
+  }
+
+  identity OSPF {
+    base protocol-type;
+  }
+}

@@ -170,6 +170,7 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 		if m, ok := m.(*yang.Must); ok {
 			// newlines might appear in the yang file, replace them with space
 			stmt := strings.ReplaceAll(m.Name, "\n", " ")
+			stmt = normalizeXPathLiterals(stmt, e)
 			ms := &sdcpb.MustStatement{
 				Statement: stmt,
 			}
@@ -180,6 +181,58 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 		}
 	}
 	return rs
+}
+
+// normalizeXPathLiterals rewrites quoted string literals in an xpath expression
+// of the form 'prefix:name' (or "prefix:name") where prefix is a local import
+// alias to use the imported module's own declared prefix instead.
+// Literals whose prefix is not in the import table are left unchanged.
+func normalizeXPathLiterals(xpath string, e *yang.Entry) string {
+	var b strings.Builder
+	i := 0
+	for i < len(xpath) {
+		ch := xpath[i]
+		if ch == '\'' || ch == '"' {
+			end := strings.IndexByte(xpath[i+1:], ch)
+			if end < 0 {
+				b.WriteString(xpath[i:])
+				return b.String()
+			}
+			end = i + 1 + end
+			literal := xpath[i+1 : end]
+			b.WriteByte(ch)
+			b.WriteString(normalizeIdentityrefLiteral(literal, e))
+			b.WriteByte(ch)
+			i = end + 1
+		} else {
+			b.WriteByte(ch)
+			i++
+		}
+	}
+	return b.String()
+}
+
+// normalizeIdentityrefLiteral rewrites a single literal value 'prefix:name'
+// to use the declared prefix of the imported module.
+func normalizeIdentityrefLiteral(literal string, e *yang.Entry) string {
+	colonIdx := strings.IndexByte(literal, ':')
+	if colonIdx < 0 {
+		return literal
+	}
+	prefix := literal[:colonIdx]
+	name := literal[colonIdx+1:]
+	if strings.ContainsAny(prefix, " \t\n/[]@=") {
+		return literal
+	}
+	mod := yang.FindModuleByPrefix(e.Node, prefix)
+	if mod == nil {
+		return literal
+	}
+	declaredPrefix := mod.GetPrefix()
+	if declaredPrefix == prefix {
+		return literal
+	}
+	return declaredPrefix + ":" + name
 }
 
 func getIfFeature(e *yang.Entry) []string {
