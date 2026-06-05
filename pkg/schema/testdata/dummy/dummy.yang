@@ -60,6 +60,45 @@ module dummy {
                 }
             }
         }
+        list unique-one {
+            key "id";
+            unique "ip port";
+            leaf id {
+                type string;
+            }
+            leaf ip {
+                type string;
+            }
+            leaf port {
+                type uint16;
+            }
+        }
+        list no-unique {
+            key "id";
+            leaf id {
+                type string;
+            }
+            leaf val {
+                type string;
+            }
+        }
+        list unique-two {
+            key "id";
+            unique "ip port";
+            unique "name";
+            leaf id {
+                type string;
+            }
+            leaf ip {
+                type string;
+            }
+            leaf port {
+                type uint16;
+            }
+            leaf name {
+                type string;
+            }
+        }
         container foo2 {
             // choice with explicit cases
             choice c2 {

@@ -48,6 +48,7 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 		if e.ListAttr.OrderedBy != nil {
 			c.IsUserOrdered = e.ListAttr.OrderedBy.Name == "user"
 		}
+		c.UniqueConstraints = getUniqueConstraints(e)
 	}
 	if e.Prefix != nil {
 		c.Prefix = e.Prefix.Name
@@ -95,6 +96,24 @@ func (sc *Schema) containerFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Cont
 		return cmp.Compare(slices.Index(keys, a.GetName()), slices.Index(keys, b.GetName()))
 	})
 	return c, nil
+}
+
+func getUniqueConstraints(e *yang.Entry) []*sdcpb.UniqueConstraint {
+	raw, ok := e.Extra["unique"]
+	if !ok || len(raw) == 0 {
+		return nil
+	}
+	constraints := make([]*sdcpb.UniqueConstraint, 0, len(raw))
+	for _, item := range raw {
+		v, ok := item.(*yang.Value)
+		if !ok {
+			continue
+		}
+		constraints = append(constraints, &sdcpb.UniqueConstraint{
+			Elements: strings.Fields(v.Name),
+		})
+	}
+	return constraints
 }
 
 func getMandatoryChildren(e *yang.Entry) []*sdcpb.MandatoryChild {
