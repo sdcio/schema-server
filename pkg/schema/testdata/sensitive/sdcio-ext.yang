@@ -1,0 +1,12 @@
+module sdcio-ext {
+  yang-version 1.1;
+  namespace "urn:sdcio-ext";
+  prefix "sdcio-ext";
+
+  extension sensitive {
+    description
+      "Marks a leaf or leaf-list as containing sensitive data.
+       The northbound API redacts its value with '***' unless
+       include_sensitive is set on the request.";
+  }
+}

@@ -1,0 +1,16 @@
+module overlay {
+  yang-version 1.1;
+  namespace "urn:overlay";
+  prefix "overlay";
+
+  import device    { prefix "device"; }
+  import sdcio-ext { prefix "sdcio-ext"; }
+
+  // Device-profile overlay: marks plain-secret sensitive via deviate add,
+  // exercising the ApplyDeviate Exts-propagation fix in sdcio/goyang.
+  deviation /device:plain-secret {
+    deviate add {
+      sdcio-ext:sensitive;
+    }
+  }
+}
