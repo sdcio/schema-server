@@ -1,0 +1,35 @@
+module must-alias-consumer {
+  yang-version 1.1;
+  namespace "urn:test/must-alias-consumer";
+  prefix "mac";
+
+  import must-identity {
+    prefix alias-id;
+  }
+
+  // must uses non-standard import alias — should be rewritten to declared prefix
+  leaf protocol-with-alias {
+    type identityref {
+      base alias-id:protocol-type;
+    }
+    must ". = 'alias-id:BGP' or . = 'alias-id:OSPF'" {
+      error-message "Must be BGP or OSPF";
+    }
+  }
+
+  // must uses a literal that has no colon — must remain unchanged
+  leaf plain-string-must {
+    type string;
+    must ". != 'just-a-string'" {
+      error-message "Must not be just-a-string";
+    }
+  }
+
+  // must uses a prefix not in the import table — must remain unchanged
+  leaf unknown-prefix-must {
+    type string;
+    must ". != 'unknown-mod:FOO'" {
+      error-message "Must not be unknown-mod:FOO";
+    }
+  }
+}

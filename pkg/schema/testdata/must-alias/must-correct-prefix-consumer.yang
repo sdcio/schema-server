@@ -1,0 +1,19 @@
+module must-correct-prefix-consumer {
+  yang-version 1.1;
+  namespace "urn:test/must-correct-prefix-consumer";
+  prefix "mcpc";
+
+  import must-identity {
+    prefix must-id;
+  }
+
+  // must already uses the declared prefix — must remain unchanged (idempotent)
+  leaf protocol-correct-prefix {
+    type identityref {
+      base must-id:protocol-type;
+    }
+    must ". = 'must-id:BGP'" {
+      error-message "Must be BGP";
+    }
+  }
+}
