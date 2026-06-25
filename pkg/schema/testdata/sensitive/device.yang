@@ -1,0 +1,29 @@
+module device {
+  yang-version 1.1;
+  namespace "urn:device";
+  prefix "device";
+
+  import sdcio-ext { prefix "sdcio-ext"; }
+
+  // Leaf with sdcio-ext:sensitive annotated directly.
+  leaf auth-password {
+    sdcio-ext:sensitive;
+    type string;
+  }
+
+  // Leaf-list with sdcio-ext:sensitive annotated directly.
+  leaf-list allowed-keys {
+    sdcio-ext:sensitive;
+    type string;
+  }
+
+  // Plain leaf — must NOT be marked sensitive.
+  leaf description {
+    type string;
+  }
+
+  // Plain leaf to be marked sensitive via deviate add in overlay.yang.
+  leaf plain-secret {
+    type string;
+  }
+}

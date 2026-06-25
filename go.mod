@@ -2,7 +2,7 @@ module github.com/sdcio/schema-server
 
 go 1.25.0
 
-replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.2-2
+replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.2-2.0.20260608121857-4668a077cf72
 
 require (
 	github.com/dgraph-io/badger/v4 v4.9.2
@@ -14,7 +14,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/openconfig/goyang v1.6.0
 	github.com/prometheus/client_golang v1.23.2
-	github.com/sdcio/sdc-protos v0.0.54
+	github.com/sdcio/sdc-protos v0.0.55-0.20260610090020-aeb8edf494c4
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.81.1

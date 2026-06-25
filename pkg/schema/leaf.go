@@ -41,6 +41,7 @@ func (sc *Schema) leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchem
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
 		IfFeature:      getIfFeature(e),
+		Sensitive:      isSensitiveEntry(e),
 	}
 
 	if withDesc {
@@ -181,6 +182,18 @@ func getMustStatement(e *yang.Entry) []*sdcpb.MustStatement {
 		}
 	}
 	return rs
+}
+
+// isSensitiveEntry reports whether the goyang entry carries the
+// sdcio-ext:sensitive extension, either directly on the leaf or propagated
+// onto it via a deviate add/replace in a device-profile overlay YANG file.
+func isSensitiveEntry(e *yang.Entry) bool {
+	for _, ext := range e.Exts {
+		if ext.Keyword == "sdcio-ext:sensitive" {
+			return true
+		}
+	}
+	return false
 }
 
 func getIfFeature(e *yang.Entry) []string {
