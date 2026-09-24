@@ -28,8 +28,8 @@ import (
 	"github.com/dgraph-io/badger/v4/options"
 	"github.com/jellydator/ttlcache/v3"
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -125,6 +125,7 @@ func (s *persistStore) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequ
 	rs := &sdcpb.ListSchemaResponse{
 		Schema: []*sdcpb.Schema{},
 	}
+	log := logger.FromContext(ctx)
 	err := s.db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false
@@ -135,7 +136,7 @@ func (s *persistStore) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequ
 			item := it.Item()
 			parts := bytes.SplitN(item.Key()[1:], schemaNameSepByte, 3)
 			if len(parts) != 3 {
-				log.Errorf("unexpected schema key format: %s", item.Key())
+				log.Error(nil, "unexpected schema key format", "key", item.Key())
 				continue
 			}
 			schema := &sdcpb.Schema{
@@ -216,7 +217,7 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 	case req.GetSchema().GetVersion() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
-	sc, err := schema.NewSchema(
+	sc, err := schema.NewSchema(ctx,
 		&config.SchemaConfig{
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
@@ -234,7 +235,7 @@ func (s *persistStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchema
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("schema %s saved in %s", sc.UniqueName(""), time.Since(now))
+	logger.FromContext(ctx).Info("schema saved", "schema", sc.UniqueName(""), "duration", time.Since(now).String())
 	return &sdcpb.CreateSchemaResponse{
 		Schema: reqSchema,
 	}, nil
@@ -248,7 +249,7 @@ func (s *persistStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchema
 		return nil, err
 	}
 	// parse
-	sc, err := schema.NewSchema(
+	sc, err := schema.NewSchema(ctx,
 		&config.SchemaConfig{
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
@@ -272,7 +273,7 @@ func (s *persistStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchema
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("schema %s saved in %s", sc.UniqueName(""), time.Since(now))
+	logger.FromContext(ctx).Info("schema saved", "schema", sc.UniqueName(""), "duration", time.Since(now).String())
 	return &sdcpb.ReloadSchemaResponse{}, nil
 }
 
@@ -363,6 +364,7 @@ func (s *persistStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSche
 		return sch, nil
 	}
 
+	log := logger.FromContext(ctx)
 	go func() {
 		defer close(sch)
 		for i := 0; i < len(req.GetPath().GetElem()); i++ {
@@ -377,7 +379,7 @@ func (s *persistStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSche
 				WithDescription: req.GetWithDescription(),
 			}, sck)
 			if err != nil {
-				log.Errorf("failed getting entries from schema: %v", err)
+				log.Error(err, "failed getting entries from schema")
 			}
 			select {
 			case <-ctx.Done():
@@ -686,6 +688,7 @@ func (s *persistStore) openDB(ctx context.Context) (*badger.DB, error) {
 		return nil, err
 	}
 
+	log := logger.FromContext(ctx)
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
@@ -695,12 +698,16 @@ func (s *persistStore) openDB(ctx context.Context) (*badger.DB, error) {
 				return
 			case <-ticker.C:
 			again:
-				log.Debugf("running GC for %s", s.path)
+				if log.V(logger.VDebug).Enabled() {
+					log.V(logger.VDebug).Info("running value log GC", "path", s.path)
+				}
 				err = bdb.RunValueLogGC(0.7)
 				if err == nil {
 					goto again
 				}
-				log.Debugf("GC for %s ended with err: %v", s.path, err)
+				if log.V(logger.VDebug).Enabled() {
+					log.V(logger.VDebug).Info("value log GC finished", "path", s.path, "error", err)
+				}
 			}
 		}
 	}()

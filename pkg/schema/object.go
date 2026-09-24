@@ -20,11 +20,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/logger"
 	"github.com/sdcio/schema-server/pkg/config"
 	"github.com/sdcio/schema-server/pkg/utils"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 )
 
 func (sc *Schema) SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.SchemaElem, error) {
@@ -81,7 +82,7 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		return nil, err
 	}
 	for i, mod := range mods {
-		entry, err := getEntry(mod, pe)
+		entry, err := getEntry(sc.log, mod, pe)
 		if err == nil {
 			return entry, nil
 		}
@@ -89,7 +90,14 @@ func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
 		for _, rMod := range mods[i+1:] {
 			remainingMods = append(remainingMods, rMod.Name)
 		}
-		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
+		if sc.log.V(logger.VDebug).Enabled() {
+			sc.log.V(logger.VDebug).Info("looking up path in module failed, continuing",
+				"path", strings.Join(pe, "/"),
+				"module", mod.Name,
+				"error", err,
+				"remaining-modules", remainingMods,
+			)
+		}
 	}
 	// if we are here we have not found a path, maybe we have a module name
 	// if we have one module and one path element, likely a module return this
@@ -159,13 +167,16 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 	return nil, fmt.Errorf("error getting Element for pathElement %q", pathElement)
 }
 
-func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
-	log.Tracef("getEntry %s Dir=%v, Choice=%v, Case=%v, %v",
-		e.Name,
-		e.IsDir(),
-		e.IsChoice(),
-		e.IsCase(),
-		pe)
+func getEntry(log logr.Logger, e *yang.Entry, pe []string) (*yang.Entry, error) {
+	if log.V(logger.VTrace).Enabled() {
+		log.V(logger.VTrace).Info("getEntry",
+			"name", e.Name,
+			"dir", e.IsDir(),
+			"choice", e.IsChoice(),
+			"case", e.IsCase(),
+			"path", pe,
+		)
+	}
 	switch len(pe) {
 	case 0:
 		switch {
@@ -194,7 +205,7 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 			if ee.Name != pathElements[len(pathElements)-1] {
 				continue
 			}
-			return getEntry(ee, pe[1:])
+			return getEntry(log, ee, pe[1:])
 		}
 		// fmt.Println("entry name", e.Name, pe)
 		return nil, fmt.Errorf("%q not a child entry of %v", pe[0], e.Name)
@@ -243,13 +254,16 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 }
 
 func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
-	log.Tracef("buildPath START")
-	log.Tracef("buildPath: remainingPathElems=%v, path=%v", pe, p)
-	log.Tracef("received PE=%v", pe)
-	log.Tracef("current path=%v", p)
-	log.Tracef("YANG entry=%v isChoice=%v, isCase=%v", e.Name, e.IsChoice(), e.IsCase())
-	log.Tracef("YANG children: %v", e.Dir)
-	log.Tracef("buildPath END")
+	if sc.log.V(logger.VTrace).Enabled() {
+		sc.log.V(logger.VTrace).Info("buildPath",
+			"remaining-path", pe,
+			"path", p,
+			"entry-name", e.Name,
+			"is-choice", e.IsChoice(),
+			"is-case", e.IsCase(),
+			"children", e.Dir,
+		)
+	}
 
 	lpe := len(pe)
 	cpe := &sdcpb.PathElem{
@@ -497,26 +511,28 @@ func (sc *Schema) GetEntryCh(pe []string, ch chan *yang.Entry) error {
 		if e == nil {
 			return fmt.Errorf("module %q not found", first)
 		}
-		return getEntryCh(e, pe[offset:], ch)
+		return getEntryCh(sc.log, e, pe[offset:], ch)
 	}
 	// skip first level modules and try their children
 	for _, child := range sc.root.Dir {
 		if cc, ok := child.Dir[first]; ok {
 			ch <- cc
-			return getEntryCh(cc, pe[offset:], ch)
+			return getEntryCh(sc.log, cc, pe[offset:], ch)
 		}
 	}
 	return fmt.Errorf("entry %q not found", pe[0])
 }
 
-func getEntryCh(e *yang.Entry, pe []string, ch chan *yang.Entry) error {
-	log.Tracef("getEntryCh: %v ", pe)
-	log.Tracef("getEntryCh %s Dir=%v, Choice=%v, Case=%v, %v",
-		e.Name,
-		e.IsDir(),
-		e.IsChoice(),
-		e.IsCase(),
-		pe)
+func getEntryCh(log logr.Logger, e *yang.Entry, pe []string, ch chan *yang.Entry) error {
+	if log.V(logger.VTrace).Enabled() {
+		log.V(logger.VTrace).Info("getEntryCh",
+			"path", pe,
+			"name", e.Name,
+			"dir", e.IsDir(),
+			"choice", e.IsChoice(),
+			"case", e.IsCase(),
+		)
+	}
 	switch len(pe) {
 	case 0:
 		switch {
@@ -543,14 +559,19 @@ func getEntryCh(e *yang.Entry, pe []string, ch chan *yang.Entry) error {
 			if ee.Name != pe[0] {
 				continue
 			}
-			log.Debugf("%v , %q | Dir=%v,Cont=%v Choice=%v, Case=%v\n", pe, ee.Name,
-				e.IsDir(),
-				e.IsContainer(),
-				e.IsChoice(),
-				e.IsCase())
+			if log.V(logger.VDebug).Enabled() {
+				log.V(logger.VDebug).Info("getEntryCh child match",
+					"path", pe,
+					"child", ee.Name,
+					"dir", e.IsDir(),
+					"container", e.IsContainer(),
+					"choice", e.IsChoice(),
+					"case", e.IsCase(),
+				)
+			}
 
 			ch <- ee
-			return getEntryCh(ee, pe[1:], ch)
+			return getEntryCh(log, ee, pe[1:], ch)
 		}
 		// fmt.Println("entry name", e.Name, pe)
 		return fmt.Errorf("%q not found", pe[0])

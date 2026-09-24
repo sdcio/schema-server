@@ -24,8 +24,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -38,6 +39,7 @@ var schemaUploadCmd = &cobra.Command{
 	Short:        "upload schemas to the schema server",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, _ []string) error {
+		log := logger.FromContext(cmd.Context())
 		switch hashMethod {
 		case "md5", "sha256", "sha512":
 		default:
@@ -82,14 +84,14 @@ var schemaUploadCmd = &cobra.Command{
 			}
 			// walk files and upload
 			for _, schemaFile := range schemaFiles {
-				err = filepath.Walk(schemaFile, uploadFileFn(uploadClient, sdcpb.UploadSchemaFile_MODULE))
+				err = filepath.Walk(schemaFile, uploadFileFn(log, uploadClient, sdcpb.UploadSchemaFile_MODULE))
 				if err != nil {
 					senderErrCh <- err
 				}
 			}
 			// walk dir and upload
 			for _, schemaFile := range schemaDirs {
-				err = filepath.Walk(schemaFile, uploadFileFn(uploadClient, sdcpb.UploadSchemaFile_DEPENDENCY))
+				err = filepath.Walk(schemaFile, uploadFileFn(log, uploadClient, sdcpb.UploadSchemaFile_DEPENDENCY))
 				if err != nil {
 					senderErrCh <- err
 				}
@@ -110,15 +112,15 @@ var schemaUploadCmd = &cobra.Command{
 			return ctx.Err()
 		case err := <-senderErrCh:
 			if err != nil {
-				log.Errorf("sender error: %v", err)
+				log.Error(err, "sender error")
 			}
 		}
-		log.Infof("schema uploaded, waiting for schema parsing")
+		log.Info("schema uploaded, waiting for schema parsing")
 		err = <-rcvrErrCh
 		if err != nil {
 			return err
 		}
-		log.Infof("schema parsed.")
+		log.Info("schema parsed")
 		return nil
 	},
 }
@@ -133,9 +135,11 @@ func init() {
 	schemaUploadCmd.Flags().StringVarP(&hashMethod, "hash", "", "md5", "hash method: md5, sha256 or sha512")
 }
 
-func uploadFileFn(uploadClient sdcpb.SchemaServer_UploadSchemaClient, ft sdcpb.UploadSchemaFile_FileType) func(path string, info fs.FileInfo, err error) error {
+func uploadFileFn(log logr.Logger, uploadClient sdcpb.SchemaServer_UploadSchemaClient, ft sdcpb.UploadSchemaFile_FileType) func(path string, info fs.FileInfo, err error) error {
 	return func(path string, info fs.FileInfo, err error) error {
-		log.Debugf("found file %s", path)
+		if log.V(logger.VDebug).Enabled() {
+			log.V(logger.VDebug).Info("found file", "path", path)
+		}
 		if err != nil {
 			return err
 		}
@@ -143,14 +147,14 @@ func uploadFileFn(uploadClient sdcpb.SchemaServer_UploadSchemaClient, ft sdcpb.U
 		if info.IsDir() || filepath.Ext(path) != ".yang" {
 			return nil
 		}
-		log.Infof("reading file %s", path)
+		log.Info("reading file", "path", path)
 		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 		// calculate hash
 		hashVal := calcHash(hashMethod, b)
-		log.Infof("uploading file %s", path)
+		log.Info("uploading file", "path", path)
 		// divide the file in chunks of $uploadSize
 		for start := 0; start < len(b); start += uploadSize {
 			end := start + uploadSize
@@ -172,7 +176,7 @@ func uploadFileFn(uploadClient sdcpb.SchemaServer_UploadSchemaClient, ft sdcpb.U
 				return err
 			}
 		}
-		log.Infof("sending file hash %s", path)
+		log.Info("sending file hash", "path", path)
 		err = uploadClient.Send(&sdcpb.UploadSchemaRequest{
 			Upload: &sdcpb.UploadSchemaRequest_SchemaFile{
 				SchemaFile: &sdcpb.UploadSchemaFile{

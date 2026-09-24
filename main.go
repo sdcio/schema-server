@@ -16,17 +16,17 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/spf13/pflag"
 
 	"github.com/sdcio/schema-server/pkg/config"
+	"github.com/sdcio/schema-server/pkg/logbootstrap"
 	"github.com/sdcio/schema-server/pkg/server"
 )
 
@@ -51,14 +51,9 @@ func main() {
 		return
 	}
 
-	log.SetFormatter(&log.TextFormatter{FullTimestamp: true})
-	log.SetLevel(log.InfoLevel)
-	if debug {
-		log.SetLevel(log.DebugLevel)
-	}
-	if trace {
-		log.SetLevel(log.TraceLevel)
-	}
+	log, ctx := logbootstrap.Init(debug, trace)
+	log.Info("schema-server bootstrap", "version", version, "commit", commit)
+
 	var s *server.Server
 START:
 	if s != nil {
@@ -66,42 +61,56 @@ START:
 	}
 	cfg, err := config.New(configFile)
 	if err != nil {
-		log.Errorf("failed to read config: %v", err)
+		log.Error(err, "failed to read config")
 		os.Exit(1)
 	}
-	b, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		log.Errorf("failed to marshal config: %v", err)
-		os.Exit(1)
-	}
-	log.Infof("read config:\n%s", string(b))
+	logConfigSummary(log, configFile, cfg)
 
-	s, err = server.NewServer(cfg)
+	s, err = server.NewServer(ctx, cfg)
 	if err != nil {
-		log.Errorf("failed to create server: %v", err)
+		log.Error(err, "failed to create server")
 		os.Exit(1)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	setupCloseHandler(cancel)
+	ctx, cancel := context.WithCancel(ctx)
+	setupCloseHandler(log, cancel)
 
 	err = s.Serve(ctx)
 	if err != nil {
 		if stop {
 			return
 		}
-		log.Errorf("failed to run server: %v", err)
+		log.Error(err, "failed to run server")
 		time.Sleep(time.Second)
 		goto START
 	}
 }
 
-func setupCloseHandler(cancelFn context.CancelFunc) {
+func logConfigSummary(log logr.Logger, configFile string, cfg *config.Config) {
+	schemaCount := 0
+	storeType := ""
+	storePath := ""
+	if cfg.SchemaStore != nil {
+		schemaCount = len(cfg.SchemaStore.Schemas)
+		storeType = cfg.SchemaStore.Type
+		storePath = cfg.SchemaStore.Path
+	}
+	log.Info("read config",
+		"config-file", configFile,
+		"grpc-address", cfg.GRPCServer.Address,
+		"schema-store-type", storeType,
+		"schema-store-path", storePath,
+		"configured-schemas", schemaCount,
+		"prometheus-enabled", cfg.Prometheus != nil,
+	)
+}
+
+func setupCloseHandler(log logr.Logger, cancelFn context.CancelFunc) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
 		sig := <-c
-		fmt.Fprintf(os.Stderr, "\nreceived signal '%s'. terminating...\n", sig.String())
+		log.Info("received signal, terminating", "signal", sig.String())
 		stop = true
 		cancelFn()
 		time.Sleep(500 * time.Millisecond)
