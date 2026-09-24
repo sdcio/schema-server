@@ -20,8 +20,8 @@ import (
 	"sync"
 
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -67,7 +67,9 @@ func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (
 	resp := &sdcpb.GetSchemaResponse{
 		Schema: schemElem,
 	}
-	log.Tracef("schema response: %v", resp)
+	if log := logger.FromContext(ctx); log.V(logger.VTrace).Enabled() {
+		log.V(logger.VTrace).Info("schema response", "response", resp)
+	}
 	return resp, nil
 }
 
@@ -147,7 +149,7 @@ func (s *memStore) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequ
 	case req.GetSchema().GetVersion() == "":
 		return nil, status.Error(codes.InvalidArgument, "missing schema version")
 	}
-	sc, err := schema.NewSchema(
+	sc, err := schema.NewSchema(ctx,
 		&config.SchemaConfig{
 			Name:        req.GetSchema().GetName(),
 			Vendor:      req.GetSchema().GetVendor(),
@@ -183,7 +185,7 @@ func (s *memStore) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequ
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	nsc, err := sc.Reload()
+	nsc, err := sc.Reload(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -315,6 +317,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 	ych := make(chan *yang.Entry)
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
+	log := logger.FromContext(ctx)
 	go func() {
 		defer wg.Done()
 		for {
@@ -327,7 +330,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 				}
 				schemElem, err := sc.SchemaElemFromYEntry(e, req.GetWithDescription())
 				if err != nil {
-					log.Errorf("failed getting entries from schema: %v", err)
+					log.Error(err, "failed getting entries from schema")
 				}
 				sch <- schemElem
 			}
@@ -337,7 +340,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 		defer wg.Done()
 		err := sc.GetEntryCh(pes, ych)
 		if err != nil {
-			log.Errorf("failed getting entries from schema: %v", err)
+			log.Error(err, "failed getting entries from schema")
 		}
 	}()
 	go func() {

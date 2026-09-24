@@ -28,8 +28,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	_ "google.golang.org/grpc/encoding/gzip" // Install the gzip compressor
@@ -44,7 +44,8 @@ import (
 type Server struct {
 	config *config.Config
 
-	cfn context.CancelFunc
+	logCtx context.Context
+	cfn    context.CancelFunc
 
 	schemaStore store.Store
 
@@ -55,10 +56,13 @@ type Server struct {
 	reg    *prometheus.Registry
 }
 
-func NewServer(c *config.Config) (*Server, error) {
-	ctx, cancel := context.WithCancel(context.TODO())
+func NewServer(ctx context.Context, c *config.Config) (*Server, error) {
+	log := logger.FromContext(ctx)
+	logCtx := ctx
+	ctx, cancel := context.WithCancel(ctx)
 	var s = &Server{
 		config: c,
+		logCtx: logCtx,
 		cfn:    cancel,
 		router: mux.NewRouter(),
 		reg:    prometheus.NewRegistry(),
@@ -81,33 +85,36 @@ func NewServer(c *config.Config) (*Server, error) {
 		return nil, err
 	}
 	for _, storeSc := range ls.GetSchema() {
-		log.Debugf("schema store has schema %s", storeSc.String())
+		if log.V(logger.VDebug).Enabled() {
+			log.V(logger.VDebug).Info("schema store has schema", "schema", storeSc.String())
+		}
 	}
-	// gRPC server options
 	opts := []grpc.ServerOption{
 		grpc.MaxRecvMsgSize(c.GRPCServer.MaxRecvMsgSize),
+	}
+
+	unaryInterceptors := []grpc.UnaryServerInterceptor{
+		timeoutUnaryInterceptor(c),
+		contextLoggingUnaryInterceptor(logCtx),
+	}
+	streamInterceptors := []grpc.StreamServerInterceptor{
+		contextLoggingStreamInterceptor(logCtx),
 	}
 
 	if c.Prometheus != nil {
 		grpcClientMetrics := grpc_prometheus.NewClientMetrics()
 		s.reg.MustRegister(grpcClientMetrics)
 
-		// add gRPC server interceptors for the Schema/Data server
 		grpcMetrics := grpc_prometheus.NewServerMetrics()
-		opts = append(opts,
-			grpc.StreamInterceptor(grpcMetrics.StreamServerInterceptor()),
-		)
-		unaryInterceptors := []grpc.UnaryServerInterceptor{
-			func(ctx context.Context, req interface{}, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-				ctx, cfn := context.WithTimeout(ctx, c.GRPCServer.RPCTimeout)
-				defer cfn()
-				return handler(ctx, req)
-			},
-		}
+		streamInterceptors = append(streamInterceptors, grpcMetrics.StreamServerInterceptor())
 		unaryInterceptors = append(unaryInterceptors, grpcMetrics.UnaryServerInterceptor())
-		opts = append(opts, grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)))
 		s.reg.MustRegister(grpcMetrics)
 	}
+
+	opts = append(opts,
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(unaryInterceptors...)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(streamInterceptors...)),
+	)
 
 	if c.GRPCServer.TLS != nil {
 		tlsCfg, err := c.GRPCServer.TLS.NewConfig(ctx)
@@ -119,7 +126,7 @@ func NewServer(c *config.Config) (*Server, error) {
 
 	s.srv = grpc.NewServer(opts...)
 	// parse schemas
-	log.Infof("%d schema(s) configured...", len(c.SchemaStore.Schemas))
+	log.Info("parsing configured schemas", "count", len(c.SchemaStore.Schemas))
 	wg := new(sync.WaitGroup)
 	wg.Add(len(c.SchemaStore.Schemas))
 	for _, sCfg := range c.SchemaStore.Schemas {
@@ -130,22 +137,28 @@ func NewServer(c *config.Config) (*Server, error) {
 				Vendor:  sCfg.Vendor,
 				Version: sCfg.Version,
 			}
+			schemaLog := log.WithValues(
+				"schema-name", sCfg.Name,
+				"schema-vendor", sCfg.Vendor,
+				"schema-version", sCfg.Version,
+			)
+			loadCtx := logger.IntoContext(ctx, schemaLog)
 			if s.schemaStore.HasSchema(sck) {
-				log.Infof("schema %s already exists in the store: not reloading it...", sck)
+				schemaLog.Info("schema already exists in the store, not reloading")
 				return
 			}
-			sc, err := schema.NewSchema(sCfg)
+			sc, err := schema.NewSchema(loadCtx, sCfg)
 			if err != nil {
-				log.Errorf("schema %s parsing failed: %v", sCfg.Name, err)
+				schemaLog.Error(err, "schema parsing failed")
 				return
 			}
 			now := time.Now()
 			err = s.schemaStore.AddSchema(sc)
 			if err != nil {
-				log.Errorf("failed to add schema %s: %v", sc.UniqueName(""), err)
+				schemaLog.Error(err, "failed to add schema to store")
 				return
 			}
-			log.Infof("schema %s saved in %s", sc.UniqueName(""), time.Since(now))
+			schemaLog.Info("schema saved", "duration", time.Since(now).String())
 		}(sCfg)
 	}
 	wg.Wait()
@@ -155,11 +168,12 @@ func NewServer(c *config.Config) (*Server, error) {
 }
 
 func (s *Server) Serve(ctx context.Context) error {
+	log := logger.FromContext(ctx)
 	l, err := net.Listen("tcp", s.config.GRPCServer.Address)
 	if err != nil {
 		return err
 	}
-	log.Infof("running server on %s", s.config.GRPCServer.Address)
+	log.Info("running server", "address", s.config.GRPCServer.Address)
 	if s.config.Prometheus != nil {
 		go s.ServeHTTP()
 	}
@@ -183,7 +197,7 @@ func (s *Server) ServeHTTP() {
 	}
 	err := srv.ListenAndServe()
 	if err != nil {
-		log.Errorf("HTTP server stopped: %v", err)
+		logger.DefaultLogger.Error(err, "HTTP server stopped")
 	}
 }
 

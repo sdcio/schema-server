@@ -28,8 +28,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/go-logr/logr"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -39,52 +40,63 @@ import (
 )
 
 func (s *Server) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (*sdcpb.GetSchemaResponse, error) {
-	log.Debugf("received GetSchemaRequest: %v", req)
+	logRPC(ctx, "GetSchema", "request", req)
 	return s.schemaStore.GetSchema(ctx, req)
 }
 
 func (s *Server) ListSchema(ctx context.Context, req *sdcpb.ListSchemaRequest) (*sdcpb.ListSchemaResponse, error) {
-	log.Debugf("received ListSchema: %v", req)
+	logRPC(ctx, "ListSchema", "request", req)
 	return s.schemaStore.ListSchema(ctx, req)
 }
 
 func (s *Server) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDetailsRequest) (*sdcpb.GetSchemaDetailsResponse, error) {
-	log.Debugf("received GetSchemaDetails: %v", req)
+	logRPC(ctx, "GetSchemaDetails", "request", req)
 	return s.schemaStore.GetSchemaDetails(ctx, req)
 }
 
 func (s *Server) CreateSchema(ctx context.Context, req *sdcpb.CreateSchemaRequest) (*sdcpb.CreateSchemaResponse, error) {
-	log.Debugf("received CreateSchema: %v", req)
+	logRPC(ctx, "CreateSchema", "request", req)
 	return s.schemaStore.CreateSchema(ctx, req)
 }
 
 func (s *Server) ReloadSchema(ctx context.Context, req *sdcpb.ReloadSchemaRequest) (*sdcpb.ReloadSchemaResponse, error) {
-	log.Debugf("received ReloadSchema: %v", req)
+	logRPC(ctx, "ReloadSchema", "request", req)
 	return s.schemaStore.ReloadSchema(ctx, req)
 }
 
 func (s *Server) DeleteSchema(ctx context.Context, req *sdcpb.DeleteSchemaRequest) (*sdcpb.DeleteSchemaResponse, error) {
-	log.Debugf("received DeleteSchema: %v", req)
+	logRPC(ctx, "DeleteSchema", "request", req)
 	return s.schemaStore.DeleteSchema(ctx, req)
 }
 
 func (s *Server) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb.ToPathResponse, error) {
-	log.Debugf("received ToPath: %v", req)
+	logRPC(ctx, "ToPath", "request", req)
 	return s.schemaStore.ToPath(ctx, req)
 }
 
 func (s *Server) ExpandPath(ctx context.Context, req *sdcpb.ExpandPathRequest) (*sdcpb.ExpandPathResponse, error) {
-	log.Debugf("received ExpandPath: %v", req)
+	logRPC(ctx, "ExpandPath", "request", req)
 	return s.schemaStore.ExpandPath(ctx, req)
 }
 
+func logRPC(ctx context.Context, name string, key string, req interface{}) {
+	log := logger.FromContext(ctx).WithName(name)
+	if log.V(logger.VDebug).Enabled() {
+		log.V(logger.VDebug).Info("received request", key, req)
+	}
+}
+
 func (s *Server) UploadSchema(stream sdcpb.SchemaServer_UploadSchemaServer) error {
-	log.Infof("starting upload stream")
+	ctx := stream.Context()
+	log := logger.FromContext(ctx).WithName("UploadSchema")
+	log.Info("starting upload stream")
 	createReq, err := stream.Recv()
 	if err != nil {
 		return err
 	}
-	log.Debugf("received first msg in upload stream: %v", createReq)
+	if log.V(logger.VDebug).Enabled() {
+		log.V(logger.VDebug).Info("received first upload message", "message", createReq)
+	}
 	scConfig := &config.SchemaConfig{
 		Files:       []string{},
 		Directories: []string{},
@@ -95,8 +107,6 @@ func (s *Server) UploadSchema(stream sdcpb.SchemaServer_UploadSchemaServer) erro
 		return status.Error(codes.InvalidArgument, "unexpected msg type: expecting UploadSchemaRequest_CreateSchema")
 	case *sdcpb.UploadSchemaRequest_CreateSchema:
 		switch {
-		// case req.CreateSchema.GetSchema().GetName() == "":
-		// 	return status.Error(codes.InvalidArgument, "missing schema name")
 		case req.CreateSchema.GetSchema().GetVendor() == "":
 			return status.Error(codes.InvalidArgument, "missing schema vendor")
 		case req.CreateSchema.GetSchema().GetVersion() == "":
@@ -111,16 +121,19 @@ func (s *Server) UploadSchema(stream sdcpb.SchemaServer_UploadSchemaServer) erro
 			Version: scConfig.Version,
 		}
 		scConfig.Excludes = req.CreateSchema.Exclude
-		log.Infof("uploading schema %s@%s@%s", scConfig.Name, scConfig.Vendor, scConfig.Version)
+		log.Info("uploading schema",
+			"name", scConfig.Name,
+			"vendor", scConfig.Vendor,
+			"version", scConfig.Version,
+		)
 		if s.schemaStore.HasSchema(scKey) {
-			log.Errorf("schema %s@%s@%s already exists", scConfig.Name, scConfig.Vendor, scConfig.Version)
 			return status.Errorf(codes.InvalidArgument, "schema %s@%s@%s already exists", scConfig.Name, scConfig.Vendor, scConfig.Version)
 		}
 	}
 	dirname := fmt.Sprintf("%s_%s_%s", scConfig.Name, scConfig.Vendor, scConfig.Version)
 	err = os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
 	if err != nil {
-		log.Errorf("failed to clean directory %s: %v", dirname, err)
+		log.Error(err, "failed to clean directory", "dirname", dirname)
 		return status.Errorf(codes.Internal, "failed to clean directory %s: %v", dirname, err)
 	}
 	handledFiles := make(map[string]*os.File)
@@ -130,47 +143,41 @@ LOOP:
 		if err != nil {
 			return err
 		}
-		log.Debugf("got upload msg file")
+		if log.V(logger.VDebug).Enabled() {
+			log.V(logger.VDebug).Info("got upload message")
+		}
 		switch updloadFileReq := updloadFileReq.Upload.(type) {
 		case *sdcpb.UploadSchemaRequest_SchemaFile:
-			log.Debugf("got upload msg file *sdcpb.UploadSchemaRequest_SchemaFile")
 			if updloadFileReq.SchemaFile.GetFileName() == "" {
 				return status.Error(codes.InvalidArgument, "missing file name")
 			}
 			var uplFile *os.File
 			var ok bool
 			fileName := path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname, updloadFileReq.SchemaFile.GetFileName())
-			log.Debugf("creating file if it doesn't exist: %s", fileName)
-			log.Debugf("handled files: %v", handledFiles)
 			uplFile, ok = handledFiles[fileName]
 			if !ok {
-				log.Debugf("file doesn't exist %s, creating it", fileName)
 				uplFile, err = createFileWithDir(fileName)
 				if err != nil {
 					return err
 				}
 				handledFiles[fileName] = uplFile
-				log.Debugf("created file: %s", fileName)
 			}
 
 			if len(updloadFileReq.SchemaFile.GetContents()) > 0 {
-				log.Debugf("writing %d to %s", len(updloadFileReq.SchemaFile.GetContents()), fileName)
 				_, err = uplFile.Write(updloadFileReq.SchemaFile.GetContents())
 				if err != nil {
 					uplFile.Close()
-					s.cleanSchemaDir(dirname)
+					s.cleanSchemaDir(log, dirname)
 					return err
 				}
-				log.Debugf("wrote %d to %s", len(updloadFileReq.SchemaFile.GetContents()), fileName)
 			}
 			if updloadFileReq.SchemaFile.GetHash() != nil {
-				log.Debugf("got hash for file %s", fileName)
 				var hash hash.Hash
 				switch updloadFileReq.SchemaFile.GetHash().GetMethod() {
 				case sdcpb.Hash_UNSPECIFIED:
 					uplFile.Truncate(0)
 					uplFile.Close()
-					s.cleanSchemaDir(dirname)
+					s.cleanSchemaDir(log, dirname)
 					return status.Errorf(codes.InvalidArgument, "hash method unspecified")
 				case sdcpb.Hash_MD5:
 					hash = md5.New()
@@ -179,13 +186,11 @@ LOOP:
 				case sdcpb.Hash_SHA512:
 					hash = sha512.New()
 				}
-				log.Debugf("reading file to calc hash %s", fileName)
 				rb := make([]byte, 1024*1024)
-				// rewind file
 				_, err = uplFile.Seek(0, 0)
 				if err != nil {
 					uplFile.Close()
-					s.cleanSchemaDir(dirname)
+					s.cleanSchemaDir(log, dirname)
 					return err
 				}
 				for {
@@ -195,29 +200,26 @@ LOOP:
 							break
 						}
 						uplFile.Close()
-						s.cleanSchemaDir(dirname)
+						s.cleanSchemaDir(log, dirname)
 						return err
 					}
 					_, err = hash.Write(rb[:n])
 					if err != nil {
 						uplFile.Close()
-						s.cleanSchemaDir(dirname)
+						s.cleanSchemaDir(log, dirname)
 						return err
 					}
 					rb = make([]byte, 1024*1024)
 				}
-				log.Debugf("calc hash %s", fileName)
 				calcHash := hash.Sum(nil)
-				log.Debugf("localhash %x: %s", calcHash, fileName)
-				log.Debugf("rcvdhash %x: %s", updloadFileReq.SchemaFile.GetHash().GetHash(), fileName)
 				if !bytes.Equal(calcHash, updloadFileReq.SchemaFile.GetHash().GetHash()) {
 					uplFile.Close()
-					s.cleanSchemaDir(dirname)
+					s.cleanSchemaDir(log, dirname)
 					return status.Errorf(codes.FailedPrecondition, "file %s has wrong hash", updloadFileReq.SchemaFile.GetFileName())
 				}
 				err = uplFile.Close()
 				if err != nil {
-					log.Errorf("failed to close file: %v", err)
+					log.Error(err, "failed to close file")
 				}
 				switch updloadFileReq.SchemaFile.GetFileType() {
 				case sdcpb.UploadSchemaFile_MODULE:
@@ -228,23 +230,26 @@ LOOP:
 				delete(handledFiles, fileName)
 			}
 		case *sdcpb.UploadSchemaRequest_Finalize:
-			log.Debugf("got finalize msg")
 			if len(handledFiles) != 0 {
-				log.Errorf("got finalize but there are pending files")
-				s.cleanSchemaDir(dirname)
+				s.cleanSchemaDir(log, dirname)
 				return status.Errorf(codes.FailedPrecondition, "not all files are fully uploaded")
 			}
 			break LOOP
 		default:
-			s.cleanSchemaDir(dirname)
+			s.cleanSchemaDir(log, dirname)
 			return status.Errorf(codes.InvalidArgument, "unexpected message type")
 		}
 	}
-	log.Infof("all files uploaded, parsing schema...")
+	log.Info("all files uploaded, parsing schema")
 
-	sc, err := schema.NewSchema(scConfig)
+	parseCtx := logger.IntoContext(ctx, log.WithValues(
+		"schema-name", scConfig.Name,
+		"schema-vendor", scConfig.Vendor,
+		"schema-version", scConfig.Version,
+	))
+	sc, err := schema.NewSchema(parseCtx, scConfig)
 	if err != nil {
-		s.cleanSchemaDir(dirname)
+		s.cleanSchemaDir(log, dirname)
 		return err
 	}
 	err = s.schemaStore.AddSchema(sc)
@@ -280,19 +285,16 @@ func (s *Server) GetSchemaElements(req *sdcpb.GetSchemaRequest, stream sdcpb.Sch
 }
 
 func createFileWithDir(filePath string) (*os.File, error) {
-	// Create the directory path
 	dir := filepath.Dir(filePath)
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return nil, err
 	}
-
-	// Create the file
 	return os.Create(filePath)
 }
 
-func (s *Server) cleanSchemaDir(dirname string) {
+func (s *Server) cleanSchemaDir(log logr.Logger, dirname string) {
 	err := os.RemoveAll(path.Join(s.config.GRPCServer.SchemaServer.SchemasDirectory, dirname))
 	if err != nil {
-		log.Errorf("failed to clean directory %s: %v", dirname, err)
+		log.Error(err, "failed to clean directory", "dirname", dirname)
 	}
 }

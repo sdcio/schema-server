@@ -15,13 +15,15 @@
 package schema
 
 import (
+	"context"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/logger"
 	"github.com/sdcio/schema-server/pkg/config"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -30,6 +32,7 @@ const (
 
 type Schema struct {
 	config *config.SchemaConfig
+	log    logr.Logger
 
 	m       *sync.RWMutex
 	root    *yang.Entry
@@ -37,9 +40,15 @@ type Schema struct {
 	status  string
 }
 
-func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
+func NewSchema(ctx context.Context, sCfg *config.SchemaConfig) (*Schema, error) {
+	log := logger.FromContext(ctx).WithValues(
+		"schema-name", sCfg.Name,
+		"schema-vendor", sCfg.Vendor,
+		"schema-version", sCfg.Version,
+	)
 	sc := &Schema{
 		config:  sCfg,
+		log:     log,
 		m:       new(sync.RWMutex),
 		root:    &yang.Entry{},
 		modules: yang.NewModules(),
@@ -70,20 +79,20 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		e := yang.ToEntry(m)
 		sc.root.Dir[e.Name] = e
 	}
-	log.Infof("schema %s building references", sc.UniqueName(""))
+	log.Info("building references")
 	err = sc.buildReferencesAnnotation()
 	if err != nil {
 		return nil, err
 	}
 	sc.status = "ok"
-	log.Infof("schema %s parsed in %s", sc.UniqueName(""), time.Since(now))
+	log.Info("schema parsed", "duration", time.Since(now).String())
 	sc.modules = nil
 	return sc, nil
 }
 
-func (s *Schema) Reload() (*Schema, error) {
+func (s *Schema) Reload(ctx context.Context) (*Schema, error) {
 	s.status = "reloading"
-	return NewSchema(s.config)
+	return NewSchema(ctx, s.config)
 }
 
 func (s *Schema) UniqueName(sep string) string {
