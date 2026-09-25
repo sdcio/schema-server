@@ -15,6 +15,7 @@
 package schema
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -67,6 +68,17 @@ func (sc *Schema) resolvePath(pe []string, origin string) ([]pathResolution, []s
 	for _, mod := range mods {
 		entry, err := getEntry(mod, names)
 		if err != nil {
+			// A candidate module simply not containing this path is an expected miss --
+			// try the next candidate. An *AmbiguousPathError, however, means this candidate
+			// module's own subtree contains an augment-merge collision (ticket 10 / SS-2) at
+			// some nested position along the path -- that must be surfaced, not silently
+			// treated the same as "not found" (which would either mask a real ambiguity or,
+			// worse, cause getEntry's *AmbiguousPathError to be discarded here just because
+			// no other candidate module happened to match).
+			var amb *AmbiguousPathError
+			if errors.As(err, &amb) {
+				return nil, names, err
+			}
 			continue
 		}
 		winners = append(winners, pathResolution{module: mod, entry: entry})

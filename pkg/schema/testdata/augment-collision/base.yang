@@ -1,0 +1,10 @@
+module base {
+  namespace "urn:base";
+  prefix "base";
+
+  container root {
+    leaf marker {
+      type string;
+    }
+  }
+}
