@@ -137,9 +137,7 @@ func init() {
 
 func uploadFileFn(log logr.Logger, uploadClient sdcpb.SchemaServer_UploadSchemaClient, ft sdcpb.UploadSchemaFile_FileType) func(path string, info fs.FileInfo, err error) error {
 	return func(path string, info fs.FileInfo, err error) error {
-		if log.V(logger.VDebug).Enabled() {
-			log.V(logger.VDebug).Info("found file", "path", path)
-		}
+		log.V(logger.VDebug).Info("found file", "path", path)
 		if err != nil {
 			return err
 		}

@@ -698,16 +698,12 @@ func (s *persistStore) openDB(ctx context.Context) (*badger.DB, error) {
 				return
 			case <-ticker.C:
 			again:
-				if log.V(logger.VDebug).Enabled() {
-					log.V(logger.VDebug).Info("running value log GC", "path", s.path)
-				}
+				log.V(logger.VDebug).Info("running value log GC", "path", s.path)
 				err = bdb.RunValueLogGC(0.7)
 				if err == nil {
 					goto again
 				}
-				if log.V(logger.VDebug).Enabled() {
-					log.V(logger.VDebug).Info("value log GC finished", "path", s.path, "error", err)
-				}
+				log.V(logger.VDebug).Info("value log GC finished", "path", s.path, "error", err)
 			}
 		}
 	}()

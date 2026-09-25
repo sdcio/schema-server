@@ -44,8 +44,7 @@ import (
 type Server struct {
 	config *config.Config
 
-	logCtx context.Context
-	cfn    context.CancelFunc
+	cfn context.CancelFunc
 
 	schemaStore store.Store
 
@@ -58,11 +57,9 @@ type Server struct {
 
 func NewServer(ctx context.Context, c *config.Config) (*Server, error) {
 	log := logger.FromContext(ctx)
-	logCtx := ctx
 	ctx, cancel := context.WithCancel(ctx)
 	var s = &Server{
 		config: c,
-		logCtx: logCtx,
 		cfn:    cancel,
 		router: mux.NewRouter(),
 		reg:    prometheus.NewRegistry(),
@@ -95,10 +92,10 @@ func NewServer(ctx context.Context, c *config.Config) (*Server, error) {
 
 	unaryInterceptors := []grpc.UnaryServerInterceptor{
 		timeoutUnaryInterceptor(c),
-		contextLoggingUnaryInterceptor(logCtx),
+		contextLoggingUnaryInterceptor(ctx),
 	}
 	streamInterceptors := []grpc.StreamServerInterceptor{
-		contextLoggingStreamInterceptor(logCtx),
+		contextLoggingStreamInterceptor(ctx),
 	}
 
 	if c.Prometheus != nil {

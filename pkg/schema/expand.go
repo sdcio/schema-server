@@ -62,23 +62,17 @@ func (sc *Schema) getPathElems(e *yang.Entry, dt sdcpb.DataType) [][]*sdcpb.Path
 	rs := make([][]*sdcpb.PathElem, 0)
 	switch {
 	case e.IsCase():
-		if sc.log.V(logger.VDebug).Enabled() {
-			sc.log.V(logger.VDebug).Info("got case", "name", e.Name)
-		}
+		sc.log.V(logger.VDebug).Info("got case", "name", e.Name)
 		for _, c := range e.Dir {
 			rs = append(rs, sc.getPathElems(c, dt)...)
 		}
 	case e.IsChoice():
-		if sc.log.V(logger.VDebug).Enabled() {
-			sc.log.V(logger.VDebug).Info("got choice", "name", e.Name)
-		}
+		sc.log.V(logger.VDebug).Info("got choice", "name", e.Name)
 		for _, c := range e.Dir {
 			rs = append(rs, sc.getPathElems(c, dt)...)
 		}
 	case e.IsLeaf():
-		if sc.log.V(logger.VDebug).Enabled() {
-			sc.log.V(logger.VDebug).Info("got leaf", "name", e.Name)
-		}
+		sc.log.V(logger.VDebug).Info("got leaf", "name", e.Name)
 		switch dt {
 		case sdcpb.DataType_ALL:
 		case sdcpb.DataType_CONFIG:

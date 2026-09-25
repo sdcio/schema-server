@@ -168,15 +168,13 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 }
 
 func getEntry(log logr.Logger, e *yang.Entry, pe []string) (*yang.Entry, error) {
-	if log.V(logger.VTrace).Enabled() {
-		log.V(logger.VTrace).Info("getEntry",
-			"name", e.Name,
-			"dir", e.IsDir(),
-			"choice", e.IsChoice(),
-			"case", e.IsCase(),
-			"path", pe,
-		)
-	}
+	log.V(logger.VTrace).Info("getEntry",
+		"name", e.Name,
+		"dir", e.IsDir(),
+		"choice", e.IsChoice(),
+		"case", e.IsCase(),
+		"path", pe,
+	)
 	switch len(pe) {
 	case 0:
 		switch {
@@ -254,16 +252,14 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 }
 
 func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
-	if sc.log.V(logger.VTrace).Enabled() {
-		sc.log.V(logger.VTrace).Info("buildPath",
-			"remaining-path", pe,
-			"path", p,
-			"entry-name", e.Name,
-			"is-choice", e.IsChoice(),
-			"is-case", e.IsCase(),
-			"children", e.Dir,
-		)
-	}
+	sc.log.V(logger.VTrace).Info("buildPath",
+		"remaining-path", pe,
+		"path", p,
+		"entry-name", e.Name,
+		"is-choice", e.IsChoice(),
+		"is-case", e.IsCase(),
+		"children", e.Dir,
+	)
 
 	lpe := len(pe)
 	cpe := &sdcpb.PathElem{
@@ -524,15 +520,13 @@ func (sc *Schema) GetEntryCh(pe []string, ch chan *yang.Entry) error {
 }
 
 func getEntryCh(log logr.Logger, e *yang.Entry, pe []string, ch chan *yang.Entry) error {
-	if log.V(logger.VTrace).Enabled() {
-		log.V(logger.VTrace).Info("getEntryCh",
-			"path", pe,
-			"name", e.Name,
-			"dir", e.IsDir(),
-			"choice", e.IsChoice(),
-			"case", e.IsCase(),
-		)
-	}
+	log.V(logger.VTrace).Info("getEntryCh",
+		"path", pe,
+		"name", e.Name,
+		"dir", e.IsDir(),
+		"choice", e.IsChoice(),
+		"case", e.IsCase(),
+	)
 	switch len(pe) {
 	case 0:
 		switch {
@@ -559,16 +553,14 @@ func getEntryCh(log logr.Logger, e *yang.Entry, pe []string, ch chan *yang.Entry
 			if ee.Name != pe[0] {
 				continue
 			}
-			if log.V(logger.VDebug).Enabled() {
-				log.V(logger.VDebug).Info("getEntryCh child match",
-					"path", pe,
-					"child", ee.Name,
-					"dir", e.IsDir(),
-					"container", e.IsContainer(),
-					"choice", e.IsChoice(),
-					"case", e.IsCase(),
-				)
-			}
+			log.V(logger.VDebug).Info("getEntryCh child match",
+				"path", pe,
+				"child", ee.Name,
+				"dir", e.IsDir(),
+				"container", e.IsContainer(),
+				"choice", e.IsChoice(),
+				"case", e.IsCase(),
+			)
 
 			ch <- ee
 			return getEntryCh(log, ee, pe[1:], ch)
