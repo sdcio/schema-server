@@ -1,0 +1,12 @@
+module cisco-router-static {
+  namespace "urn:cisco:router-static";
+  prefix cr-static;
+
+  container router {
+    container static {
+      leaf enabled {
+        type boolean;
+      }
+    }
+  }
+}

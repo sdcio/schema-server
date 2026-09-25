@@ -1,0 +1,12 @@
+module cisco-router-ospf {
+  namespace "urn:cisco:router-ospf";
+  prefix cr-ospf;
+
+  container router {
+    container ospf {
+      leaf enabled {
+        type boolean;
+      }
+    }
+  }
+}

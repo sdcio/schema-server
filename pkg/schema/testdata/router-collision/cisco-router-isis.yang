@@ -1,0 +1,12 @@
+module cisco-router-isis {
+  namespace "urn:cisco:router-isis";
+  prefix cr-isis;
+
+  container router {
+    container isis {
+      leaf enabled {
+        type boolean;
+      }
+    }
+  }
+}

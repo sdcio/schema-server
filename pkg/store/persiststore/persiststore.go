@@ -779,58 +779,78 @@ func (s *persistStore) getSchema(_ context.Context, req *sdcpb.GetSchemaRequest,
 		}
 		return &sdcpb.GetSchemaResponse{Schema: sce}, nil
 	}
-	moduleName := ""
-	if index := strings.Index(pes[0], ":"); index > 0 {
-		moduleName = pes[0][:index]
-		pes[0] = pes[0][index+1:]
+	origin := req.GetPath().GetOrigin()
+	pp := schema.ParsePathElems(pes, origin)
+	names := schema.UnprefixedNames(pp)
+
+	allModules, err := s.getModules(sck)
+	if err != nil {
+		return nil, err
 	}
-	var modules []string
-	// path has module prefix
-	if moduleName != "" {
-		modules = []string{moduleName}
-	} else {
-		// path does not have module prefix
-		modules, err = s.getModules(sck)
-		if err != nil {
-			return nil, err
+	if len(pp) > 0 && pp[0].Module != "" {
+		modSet := make(map[string]struct{}, len(allModules))
+		for _, m := range allModules {
+			modSet[m] = struct{}{}
 		}
+		if _, ok := modSet[pp[0].Module]; !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "unknown module prefix %q", pp[0].Module)
+		}
+		if pp[0].Name == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "empty identifier after prefix %q", pp[0].Module)
+		}
+	}
+
+	var modules []string
+	if len(pp) > 0 && pp[0].Module != "" {
+		modules = []string{pp[0].Module}
+	} else {
+		modules = append(modules, allModules...)
 		sort.Slice(modules, func(i, j int) bool {
 			return utils.SortModulesAB(modules[i], modules[j], config.DeprioritizedModules)
 		})
 	}
 
-	npe := make([]string, 1+len(pes))
-	copy(npe[1:], pes)
+	var matchedModules []string
 	err = s.db.View(func(txn *badger.Txn) error {
 		for _, module := range modules {
-			var k []byte
-			if npe[1] == module { // query module name
-				k = buildEntryKey(sck, npe[1:])
+			var keyPath []string
+			if len(names) == 1 && names[0] == module {
+				keyPath = names
 			} else {
-				npe[0] = module
-				k = buildEntryKey(sck, npe)
+				keyPath = make([]string, 0, 1+len(names))
+				keyPath = append(keyPath, module)
+				keyPath = append(keyPath, names...)
 			}
+			k := buildEntryKey(sck, keyPath)
 			item, err := txn.Get(k)
-			if err != nil {
-				continue
-			}
-			if item == nil {
+			if err != nil || item == nil {
 				continue
 			}
 			v, err := item.ValueCopy(nil)
 			if err != nil {
 				return err
 			}
-			err = proto.Unmarshal(v, sce)
-			if err != nil {
+			if err := proto.Unmarshal(v, sce); err != nil {
 				return err
 			}
-			return nil
+			matchedModules = append(matchedModules, module)
 		}
-		return fmt.Errorf("%s: %w", req.GetPath(), ErrKeyNotFound)
+		if len(matchedModules) == 0 {
+			return fmt.Errorf("%s: %w", req.GetPath(), ErrKeyNotFound)
+		}
+		if len(matchedModules) > 1 {
+			sort.Slice(matchedModules, func(i, j int) bool {
+				return utils.SortModulesAB(matchedModules[i], matchedModules[j], config.DeprioritizedModules)
+			})
+			return &schema.AmbiguousPathError{
+				PathPrefix: strings.Join(names, "/"),
+				Modules:    matchedModules,
+			}
+		}
+		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, store.SchemaLookupError(err)
 	}
 	rsp := &sdcpb.GetSchemaResponse{Schema: sce}
 	if s.cache != nil {

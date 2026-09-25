@@ -35,6 +35,8 @@ type Schema struct {
 	root    *yang.Entry
 	modules *yang.Modules
 	status  string
+
+	rootAmbiguities []RootNameAmbiguity
 }
 
 func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
@@ -70,6 +72,7 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		e := yang.ToEntry(m)
 		sc.root.Dir[e.Name] = e
 	}
+	sc.rootAmbiguities = buildRootAmbiguityRegistry(sc.root)
 	log.Infof("schema %s building references", sc.UniqueName(""))
 	err = sc.buildReferencesAnnotation()
 	if err != nil {

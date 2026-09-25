@@ -56,9 +56,9 @@ func (s *memStore) GetSchema(ctx context.Context, req *sdcpb.GetSchemaRequest) (
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
-	e, err := sc.GetEntry(pes)
+	e, err := sc.GetEntryWithOrigin(pes, req.GetPath().GetOrigin())
 	if err != nil {
-		return nil, err
+		return nil, store.SchemaLookupError(err)
 	}
 	schemElem, err := sc.SchemaElemFromYEntry(e, req.GetWithDescription())
 	if err != nil {
@@ -114,6 +114,11 @@ func (s *memStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDet
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "unknown schema %v", reqSchema)
 	}
+	exclude := sc.Excludes()
+	registry := schema.AmbiguityRegistryExcludeEntries(sc.RootAmbiguities())
+	if len(registry) > 0 {
+		exclude = append(exclude, registry...)
+	}
 	rsp := &sdcpb.GetSchemaDetailsResponse{
 		Schema: &sdcpb.Schema{
 			Name:    sc.Name(),
@@ -123,8 +128,8 @@ func (s *memStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDet
 		},
 		File:      sc.Files(),
 		Directory: sc.Dirs(),
+		Exclude:   exclude,
 	}
-	//
 	return rsp, nil
 }
 
@@ -243,7 +248,7 @@ func (s *memStore) ToPath(ctx context.Context, req *sdcpb.ToPathRequest) (*sdcpb
 	}
 	err := sc.BuildPath(req.GetPathElement(), p)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", err)
+		return nil, store.SchemaLookupError(err)
 	}
 	rsp := &sdcpb.ToPathResponse{
 		Path: p,
@@ -335,7 +340,7 @@ func (s *memStore) GetSchemaElements(ctx context.Context, req *sdcpb.GetSchemaRe
 	}()
 	go func() {
 		defer wg.Done()
-		err := sc.GetEntryCh(pes, ych)
+		err := sc.GetEntryChWithOrigin(pes, req.GetPath().GetOrigin(), ych)
 		if err != nil {
 			log.Errorf("failed getting entries from schema: %v", err)
 		}
