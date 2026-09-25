@@ -63,40 +63,7 @@ func (sc *Schema) SchemaElemFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.Sch
 }
 
 func (sc *Schema) GetEntry(pe []string) (*yang.Entry, error) {
-	if len(pe) == 0 {
-		return sc.root, nil
-	}
-	// TODO: code needs to be refactored.
-	// Following piece of code takes both normalized paths or module-prepended paths as input.
-	// for example:
-	//   []string{"srl_nokia-if:interface", "srl_nokia-if:name"}
-	//   []string{"interface", "name"}
-
-	sc.m.RLock()
-	defer sc.m.RUnlock()
-
-	// Assume we are always dealing with an absolute path here?
-	mods, err := sc.FindPossibleModulesForPathElement(sc.root, pe[0])
-	if err != nil {
-		return nil, err
-	}
-	for i, mod := range mods {
-		entry, err := getEntry(mod, pe)
-		if err == nil {
-			return entry, nil
-		}
-		remainingMods := make([]string, 0, len(mods)-(i+1))
-		for _, rMod := range mods[i+1:] {
-			remainingMods = append(remainingMods, rMod.Name)
-		}
-		log.Debugf("looking up path %s in module %s caused: %v. continuing to search in %v", strings.Join(pe, "/"), mod.Name, err, remainingMods)
-	}
-	// if we are here we have not found a path, maybe we have a module name
-	// if we have one module and one path element, likely a module return this
-	if len(mods) == 1 && len(pe) == 1 && mods[0].Name == pe[0] {
-		return mods[0], nil
-	}
-	return nil, fmt.Errorf("schema entry %q not found", strings.Join(pe, "/"))
+	return sc.GetEntryWithOrigin(pe, "")
 }
 
 func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement string) ([]*yang.Entry, error) {
@@ -110,7 +77,7 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 		prefix = ""
 	}
 	// try to shortcut by returning the module directly if pathElement matches the name/prefix
-	if mod, ok := e.Dir[path]; ok && (!foundPrefix || mod.Prefix.Name == prefix) {
+	if mod, ok := e.Dir[path]; ok && (!foundPrefix || moduleHintMatches(mod, prefix)) {
 		return []*yang.Entry{mod}, nil
 	}
 
@@ -120,7 +87,7 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 	case e.Node == nil:
 		entries := make([]*yang.Entry, 0)
 		for _, entry := range sc.root.Dir {
-			if ee, ok := entry.Dir[path]; ok && (!foundPrefix || ee.Prefix.Name == prefix) {
+			if _, ok := entry.Dir[path]; ok && (!foundPrefix || moduleHintMatches(entry, prefix)) {
 				entries = append(entries, entry)
 			}
 		}
@@ -210,36 +177,61 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 	if p.GetElem() == nil {
 		p.Elem = make([]*sdcpb.PathElem, 0, 1)
 	}
-	first := pe[0]
-	index := strings.Index(pe[0], ":")
-	if index > 0 {
-		first = pe[0][:index]
-		pe[0] = pe[0][index+1:]
+
+	parsed := ParsePathElems(pe, "")
+	names := UnprefixedNames(parsed)
+	firstElem := pe[0]
+	if parsed[0].Module != "" {
+		firstElem = parsed[0].Module + ":" + parsed[0].Name
 	}
-	// try module
-	if e, ok := sc.root.Dir[first]; ok {
-		if e == nil {
-			return fmt.Errorf("module %q not found", first)
-		}
-		if ee, ok := e.Dir[pe[0]]; ok {
-			err := sc.buildPath(pe, p, ee)
-			if err != nil {
-				return err
-			}
-			// add ns/prefix to the first elem
-			p.GetElem()[0].Name = first + ":" + p.GetElem()[0].GetName()
-			return nil
-		}
-		return fmt.Errorf("elem %q not found in module %q", pe[0], first)
+
+	mods, err := sc.FindPossibleModulesForPathElement(sc.root, firstElem)
+	if err != nil {
+		return err
 	}
-	// try children
-	for _, e := range sc.root.Dir {
-		if ee, ok := e.Dir[pe[0]]; ok {
-			return sc.buildPath(pe, p, ee)
+
+	type buildWinner struct {
+		moduleName string
+	}
+	winners := make([]buildWinner, 0, len(mods))
+	savedElem := make([]*sdcpb.PathElem, 0)
+
+	for _, mod := range mods {
+		child, ok := mod.Dir[names[0]]
+		if !ok {
+			continue
+		}
+		trial := &sdcpb.Path{Elem: make([]*sdcpb.PathElem, 0, len(names))}
+		if err := sc.buildPath(names, trial, child); err != nil {
+			continue
+		}
+		winners = append(winners, buildWinner{moduleName: mod.Name})
+		if len(savedElem) == 0 {
+			savedElem = trial.Elem
 		}
 	}
 
-	return fmt.Errorf("path %v does not exist in schema %s", pe, sc.config.GetSchema().String())
+	if len(winners) == 0 {
+		return fmt.Errorf("path %v does not exist in schema %s", pe, sc.config.GetSchema().String())
+	}
+	if len(winners) > 1 {
+		moduleNames := make([]string, len(winners))
+		for i, w := range winners {
+			moduleNames[i] = w.moduleName
+		}
+		sort.Slice(moduleNames, func(i, j int) bool {
+			return utils.SortModulesAB(moduleNames[i], moduleNames[j], config.DeprioritizedModules)
+		})
+		return &AmbiguousPathError{PathPrefix: strings.Join(names, "/"), Modules: moduleNames}
+	}
+
+	p.Elem = savedElem
+	if parsed[0].Module != "" {
+		if len(p.Elem) > 0 {
+			p.Elem[0].Name = parsed[0].Module + ":" + p.Elem[0].GetName()
+		}
+	}
+	return nil
 }
 
 func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
@@ -477,36 +469,32 @@ func sortFn(rs []*yang.Entry) func(i, j int) bool {
 // ch
 
 func (sc *Schema) GetEntryCh(pe []string, ch chan *yang.Entry) error {
+	return sc.GetEntryChWithOrigin(pe, "", ch)
+}
+
+func (sc *Schema) GetEntryChWithOrigin(pe []string, origin string, ch chan *yang.Entry) error {
 	defer close(ch)
 	if len(pe) == 0 {
+		sc.m.RLock()
+		defer sc.m.RUnlock()
 		ch <- sc.root
 		return nil
-	}
-	first := pe[0]
-	offset := 1
-	index := strings.Index(pe[0], ":")
-	if index > 0 {
-		first = pe[0][:index]
-		pe[0] = pe[0][index+1:]
-		offset = 0
 	}
 
 	sc.m.RLock()
 	defer sc.m.RUnlock()
-	if e, ok := sc.root.Dir[first]; ok {
-		if e == nil {
-			return fmt.Errorf("module %q not found", first)
-		}
-		return getEntryCh(e, pe[offset:], ch)
+
+	winners, names, err := sc.resolvePath(pe, origin)
+	if err != nil {
+		return err
 	}
-	// skip first level modules and try their children
-	for _, child := range sc.root.Dir {
-		if cc, ok := child.Dir[first]; ok {
-			ch <- cc
-			return getEntryCh(cc, pe[offset:], ch)
-		}
+	mod := winners[0].module
+	entry := winners[0].entry
+	if len(names) == 1 && entry == mod {
+		ch <- mod
+		return nil
 	}
-	return fmt.Errorf("entry %q not found", pe[0])
+	return getEntryCh(mod, names, ch)
 }
 
 func getEntryCh(e *yang.Entry, pe []string, ch chan *yang.Entry) error {
