@@ -36,7 +36,8 @@ type Schema struct {
 	modules *yang.Modules
 	status  string
 
-	rootAmbiguities []RootNameAmbiguity
+	rootAmbiguities   []RootNameAmbiguity
+	nestedAmbiguities []NestedNameAmbiguity
 }
 
 func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
@@ -72,7 +73,20 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		e := yang.ToEntry(m)
 		sc.root.Dir[e.Name] = e
 	}
+
+	// SS-2 (ticket 10): yang.ToEntry(m) can silently have merged colliding cross-module augments
+	// (or an augment and the base module introducing the same local name at the same target).
+	// Since GY-1 (sdcio/goyang#5), the losing child is retained in yang.Entry.Collisions instead
+	// of being dropped -- but schema-server must still (a) surface the "Duplicate node" error
+	// loudly instead of continuing in silence, and (b) verify every such collision actually has a
+	// recoverable representation before trusting the ambiguity registry built below.
+	if err := reportAugmentMergeCollisions(sc.root, sc.UniqueName("")); err != nil {
+		sc.status = "failed"
+		return sc, err
+	}
+
 	sc.rootAmbiguities = buildRootAmbiguityRegistry(sc.root)
+	sc.nestedAmbiguities = buildNestedAmbiguityRegistry(sc.root)
 	log.Infof("schema %s building references", sc.UniqueName(""))
 	err = sc.buildReferencesAnnotation()
 	if err != nil {

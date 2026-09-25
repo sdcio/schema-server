@@ -126,6 +126,69 @@ func (sc *Schema) FindPossibleModulesForPathElement(e *yang.Entry, pathElement s
 	return nil, fmt.Errorf("error getting Element for pathElement %q", pathElement)
 }
 
+// ownerModule returns the name of the YANG module that defines e (the module containing the
+// statement e was compiled from), or "" if unknown. For an augmented child this is the
+// *augmenting* module, not the module owning the augment's target -- which is what a caller
+// needs in order to disambiguate two same-named children retained via yang.Entry.Collisions
+// (see SS-2 / ticket 10 in sdcio/data-server's .scratch/cisco-ios-xr-schema-collision).
+func ownerModule(e *yang.Entry) string {
+	if e == nil || e.Node == nil {
+		return ""
+	}
+	mod := yang.RootNode(e.Node)
+	if mod == nil {
+		return ""
+	}
+	return mod.Name
+}
+
+// lookupChild resolves a single path element (optionally "module:name"-prefixed) against e's
+// children, honoring augment-merge collisions retained via yang.Entry.Collisions/Candidates
+// instead of only ever seeing the winner in e.Dir[name] (see GY-1 in sdcio/goyang and ticket 10
+// in sdcio/data-server's .scratch/cisco-ios-xr-schema-collision).
+//
+// Return contract (mirrors the existing "e.Dir[x]" two-value lookups this replaces, plus an
+// error channel for ambiguity):
+//   - (nil, nil):  no child by that local name -- caller should fall back to its next strategy
+//     (e.g. findChoiceCase), exactly as a failed map lookup did before.
+//   - (entry, nil): exactly one candidate (the common case: no collision, or a module prefix
+//     picked one candidate unambiguously).
+//   - (nil, err):  more than one candidate and no (or non-matching) module prefix -- caller
+//     must propagate err (an *AmbiguousPathError) rather than silently picking one.
+func lookupChild(e *yang.Entry, pathElem string) (*yang.Entry, error) {
+	if e == nil {
+		return nil, nil
+	}
+	prefix, name, hasPrefix := strings.Cut(pathElem, ":")
+	if !hasPrefix {
+		name = prefix
+		prefix = ""
+	}
+	candidates := e.Candidates(name)
+	if len(candidates) == 0 {
+		return nil, nil
+	}
+	if hasPrefix {
+		for _, c := range candidates {
+			if ownerModule(c) == prefix {
+				return c, nil
+			}
+		}
+		return nil, nil
+	}
+	if len(candidates) == 1 {
+		return candidates[0], nil
+	}
+	mods := make([]string, 0, len(candidates))
+	for _, c := range candidates {
+		mods = append(mods, ownerModule(c))
+	}
+	sort.Slice(mods, func(i, j int) bool {
+		return utils.SortModulesAB(mods[i], mods[j], config.DeprioritizedModules)
+	})
+	return nil, &AmbiguousPathError{PathPrefix: name, Modules: mods}
+}
+
 func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 	log.Tracef("getEntry %s Dir=%v, Choice=%v, Case=%v, %v",
 		e.Name,
@@ -151,6 +214,16 @@ func getEntry(e *yang.Entry, pe []string) (*yang.Entry, error) {
 	default:
 		if e.Dir == nil {
 			return nil, errors.New("not found")
+		}
+		// Direct children of a container/list may include augment-merge collisions (ticket 10):
+		// check lookupChild first so an ambiguous local name errors out instead of silently
+		// resolving to whichever candidate goyang's merge() happened to keep as the Dir winner.
+		if e.IsContainer() || e.IsList() {
+			if ee, err := lookupChild(e, pe[0]); err != nil {
+				return nil, err
+			} else if ee != nil {
+				return getEntry(ee, pe[1:])
+			}
 		}
 		for _, ee := range getChildren(e) {
 			// fmt.Printf("entry %s, child %s | %s\n", e.Name, ee.Name, pe)
@@ -203,6 +276,14 @@ func (sc *Schema) BuildPath(pe []string, p *sdcpb.Path) error {
 		}
 		trial := &sdcpb.Path{Elem: make([]*sdcpb.PathElem, 0, len(names))}
 		if err := sc.buildPath(names, trial, child); err != nil {
+			// Same rule as resolvePath (matchpath.go): a candidate module's subtree simply not
+			// containing this path is an expected miss, but an *AmbiguousPathError means this
+			// candidate module's subtree contains a nested augment-merge collision (ticket 10 /
+			// SS-2) -- surface it instead of silently discarding it as a failed trial.
+			var amb *AmbiguousPathError
+			if errors.As(err, &amb) {
+				return err
+			}
 			continue
 		}
 		winners = append(winners, buildWinner{moduleName: mod.Name})
@@ -273,7 +354,9 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 			return nil
 		}
 		nxt := pe[count]
-		if ee, ok := e.Dir[nxt]; ok {
+		if ee, err := lookupChild(e, nxt); err != nil {
+			return err
+		} else if ee != nil {
 			return sc.buildPath(pe[count:], p, ee)
 		}
 		// find choices/cases
@@ -308,20 +391,24 @@ func (sc *Schema) buildPath(pe []string, p *sdcpb.Path, e *yang.Entry) error {
 		return fmt.Errorf("case %s - unknown element %s", e.Name, pe[0])
 	case e.IsContainer():
 		// implicit case: child with same name which is a choice
-		if ee, ok := e.Dir[pe[0]]; ee != nil && ok {
-			if ee.IsChoice() {
-				return sc.buildPath(pe[1:], p, ee)
-			}
+		if ee, err := lookupChild(e, pe[0]); err != nil {
+			return err
+		} else if ee != nil && ee.IsChoice() {
+			return sc.buildPath(pe[1:], p, ee)
 		}
 
 		p.Elem = append(p.Elem, cpe)
-		if ee, ok := e.Dir[pe[0]]; ok {
+		if ee, err := lookupChild(e, pe[0]); err != nil {
+			return err
+		} else if ee != nil {
 			return sc.buildPath(pe, p, ee)
 		}
 		if lpe == 1 {
 			return nil
 		}
-		if ee, ok := e.Dir[pe[1]]; ok {
+		if ee, err := lookupChild(e, pe[1]); err != nil {
+			return err
+		} else if ee != nil {
 			return sc.buildPath(pe[1:], p, ee)
 		}
 		// find choice/case
@@ -525,6 +612,16 @@ func getEntryCh(e *yang.Entry, pe []string, ch chan *yang.Entry) error {
 	default:
 		if e.Dir == nil {
 			return errors.New("not found")
+		}
+		// Same augment-merge collision guard as getEntry (ticket 10): don't let getChildren's
+		// choice/case-flattening loop below silently pick the Dir winner when pe[0] is ambiguous.
+		if e.IsContainer() || e.IsList() {
+			if ee, err := lookupChild(e, pe[0]); err != nil {
+				return err
+			} else if ee != nil {
+				ch <- ee
+				return getEntryCh(ee, pe[1:], ch)
+			}
 		}
 		for _, ee := range getChildren(e) {
 			// fmt.Printf("entry %s, child %s | %s\n", e.Name, ee.Name, pe)

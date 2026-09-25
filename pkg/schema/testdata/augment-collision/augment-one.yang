@@ -1,0 +1,21 @@
+module augment-one {
+  namespace "urn:augment-one";
+  prefix "aug1";
+
+  import base {
+    prefix base;
+  }
+
+  augment "/base:root" {
+    container clash {
+      leaf from-one {
+        type string;
+      }
+      container from-one-nested {
+        leaf inner {
+          type string;
+        }
+      }
+    }
+  }
+}

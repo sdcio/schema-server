@@ -1,0 +1,16 @@
+module augment-two {
+  namespace "urn:augment-two";
+  prefix "aug2";
+
+  import base {
+    prefix base;
+  }
+
+  augment "/base:root" {
+    container clash {
+      leaf from-two {
+        type string;
+      }
+    }
+  }
+}

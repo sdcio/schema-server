@@ -2,7 +2,12 @@ module github.com/sdcio/schema-server
 
 go 1.25.0
 
-replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.2-2
+// SS-2 (pre-release): pin to GY-1 (sdcio/goyang PR #5, fix/augment-merge-collision @ 794212b)
+// so augment-merge collisions retain the losing child (Entry.Collisions/Candidates) instead of
+// silently dropping it. Local sibling checkout for dev; CI/reviewers without a local sibling
+// should use a commit pseudo-version replace instead, e.g.:
+//   go get github.com/sdcio/goyang@794212b03b407d22a1b3e65e55f032f313d6ac78
+replace github.com/openconfig/goyang v1.6.0 => ../goyang
 
 require (
 	github.com/dgraph-io/badger/v4 v4.9.6

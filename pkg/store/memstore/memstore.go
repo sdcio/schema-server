@@ -119,6 +119,10 @@ func (s *memStore) GetSchemaDetails(ctx context.Context, req *sdcpb.GetSchemaDet
 	if len(registry) > 0 {
 		exclude = append(exclude, registry...)
 	}
+	nestedRegistry := schema.NestedAmbiguityRegistryExcludeEntries(sc.NestedAmbiguities())
+	if len(nestedRegistry) > 0 {
+		exclude = append(exclude, nestedRegistry...)
+	}
 	rsp := &sdcpb.GetSchemaDetailsResponse{
 		Schema: &sdcpb.Schema{
 			Name:    sc.Name(),
