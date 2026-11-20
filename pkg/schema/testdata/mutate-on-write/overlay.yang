@@ -1,0 +1,20 @@
+module mow-overlay {
+  yang-version 1.1;
+  namespace "urn:mow:overlay";
+  prefix "mow-ov";
+
+  import mow-device { prefix "dev"; }
+  import sdcio-ext  { prefix "customext"; }
+
+  deviation /dev:system/dev:overlay-secret {
+    deviate add {
+      customext:mutate-on-write;
+    }
+  }
+
+  deviation /dev:system/dev:overlay-secret-list {
+    deviate add {
+      customext:mutate-on-write;
+    }
+  }
+}

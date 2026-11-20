@@ -1,0 +1,7 @@
+module openconfig-extensions {
+  yang-version 1;
+  namespace "http://openconfig.net/yang/openconfig-ext";
+  prefix "oc-ext";
+
+  extension openconfig-hashed-value;
+}

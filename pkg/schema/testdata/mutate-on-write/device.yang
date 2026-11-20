@@ -1,0 +1,276 @@
+module mow-device {
+  yang-version 1.1;
+  namespace "urn:mow:device";
+  prefix "mow-dev";
+
+  import sdcio-ext             { prefix "sdcio-ext"; }
+  import openconfig-extensions { prefix "oc-ext"; }
+  import openconfig-aaa-types  { prefix "oc-aaa"; }
+  import openconfig-types      { prefix "oc-types"; }
+  import iana-crypt-hash       { prefix "ianach"; }
+  import srl_nokia-extensions  { prefix "srl-ext"; }
+  import srl_nokia-common      { prefix "srl-comm"; }
+  import tailf-common          { prefix "tailf"; }
+  import Cisco-IOS-XR-types    { prefix "xr"; }
+  import junos-common-types    { prefix "jt"; }
+
+  container system {
+    leaf direct-secret {
+      sdcio-ext:mutate-on-write;
+      type string;
+    }
+
+    leaf-list direct-secret-list {
+      sdcio-ext:mutate-on-write;
+      type string;
+    }
+
+    leaf overlay-secret {
+      type string;
+    }
+
+    leaf-list overlay-secret-list {
+      type string;
+    }
+
+    leaf plain-description {
+      type string;
+    }
+
+    // OpenConfig
+    leaf oc-hashed-ext {
+      oc-ext:openconfig-hashed-value;
+      type string;
+    }
+
+    leaf-list oc-hashed-ext-list {
+      oc-ext:openconfig-hashed-value;
+      type string;
+    }
+
+    leaf oc-crypt-pw {
+      type oc-aaa:crypt-password-type;
+    }
+
+    leaf-list oc-crypt-pw-list {
+      type oc-aaa:crypt-password-type;
+    }
+
+    // IETF / IANA
+    leaf ietf-crypt-hash {
+      type ianach:crypt-hash;
+    }
+
+    // Nokia SR Linux
+    leaf srl-inline-hash-algo {
+      type string {
+        srl-ext:hash-algorithm "ar2";
+      }
+    }
+
+    leaf srl-inline-pw-hash {
+      type string {
+        srl-ext:generated-class-name "PasswordHash";
+      }
+    }
+
+    leaf srl-inline-secret-key {
+      type string {
+        srl-ext:generated-class-name "SecretKey";
+      }
+    }
+
+    leaf-list srl-inline-secret-key-list {
+      type string {
+        srl-ext:generated-class-name "SecretKey";
+      }
+    }
+
+    leaf srl-crypt-pw {
+      type srl-comm:crypt-password-type;
+    }
+
+    // Tail-f / ConfD
+    leaf tailf-md5 {
+      type tailf:md5-digest-string;
+    }
+
+    leaf tailf-sha256 {
+      type tailf:sha-256-digest-string;
+    }
+
+    leaf tailf-sha512 {
+      type tailf:sha-512-digest-string;
+    }
+
+    leaf tailf-des3 {
+      type tailf:des3-cbc-encrypted-string;
+    }
+
+    leaf tailf-aes128 {
+      type tailf:aes-cfb-128-encrypted-string;
+    }
+
+    leaf tailf-aes256 {
+      type tailf:aes-256-cfb-128-encrypted-string;
+    }
+
+    // Cisco IOS-XR
+    leaf xr-proprietary {
+      type xr:Proprietary-password;
+    }
+
+    leaf xr-md5 {
+      type xr:Md5-password;
+    }
+
+    leaf xr-type6 {
+      type xr:Type6-password;
+    }
+
+    leaf xr-type8 {
+      type xr:Type8-password;
+    }
+
+    leaf xr-type9 {
+      type xr:Type9-password;
+    }
+
+    leaf xr-type10 {
+      type xr:Type10-password;
+    }
+
+    // Negative cases: UI-only echo suppression & cleartext routing passwords
+    leaf tailf-suppress-echo-leaf {
+      tailf:suppress-echo "true";
+      type string;
+    }
+
+    leaf junos-unreadable-leaf {
+      type jt:unreadable;
+    }
+
+    leaf junos-unreadable-ext-leaf {
+      jt:unreadable;
+      type string;
+    }
+
+    leaf oc-routing-pw {
+      type oc-types:routing-password;
+    }
+
+    leaf srl-routing-pw {
+      type srl-comm:routing-password;
+    }
+
+    leaf srl-ip-address {
+      type srl-comm:ip-address;
+    }
+
+    // Typedef chains
+    typedef base-hashed-td {
+      type ianach:crypt-hash;
+    }
+
+    typedef derived-hashed-td {
+      type base-hashed-td;
+    }
+
+    typedef ext-annotated-td {
+      oc-ext:openconfig-hashed-value;
+      type string;
+    }
+
+    typedef derived-ext-td {
+      type ext-annotated-td;
+    }
+
+    leaf chained-typedef-secret {
+      type derived-hashed-td;
+    }
+
+    leaf chained-ext-typedef-secret {
+      type derived-ext-td;
+    }
+
+    // Unions
+    leaf union-with-crypt-typedef {
+      type union {
+        type string;
+        type oc-aaa:crypt-password-type;
+      }
+    }
+
+    leaf union-with-inline-ext {
+      type union {
+        type uint32;
+        type string {
+          srl-ext:hash-algorithm "sha2";
+        }
+      }
+    }
+
+    typedef union-hashed-td {
+      type union {
+        type oc-types:routing-password;
+        type tailf:sha-512-digest-string;
+      }
+    }
+
+    leaf union-via-typedef {
+      type union-hashed-td;
+    }
+
+    leaf union-all-cleartext {
+      type union {
+        type string;
+        type uint32;
+        type oc-types:routing-password;
+        type srl-comm:routing-password;
+      }
+    }
+
+    // Leafref chains (multi-hop, absolute + relative, choice/case, and cycle)
+    leaf leafref-hop1 {
+      type leafref {
+        path "/mow-dev:system/mow-dev:ietf-crypt-hash";
+      }
+    }
+
+    leaf leafref-hop2 {
+      type leafref {
+        path "../leafref-hop1";
+      }
+    }
+
+    choice auth-choice {
+      case hashed-case {
+        container auth-holder {
+          leaf choice-leafref-to-secret {
+            type leafref {
+              path "../../oc-crypt-pw";
+            }
+          }
+        }
+      }
+    }
+
+    leaf leafref-to-cleartext {
+      type leafref {
+        path "../oc-routing-pw";
+      }
+    }
+
+    leaf cycle-a {
+      type leafref {
+        path "../cycle-b";
+      }
+    }
+
+    leaf cycle-b {
+      type leafref {
+        path "../cycle-a";
+      }
+    }
+  }
+}

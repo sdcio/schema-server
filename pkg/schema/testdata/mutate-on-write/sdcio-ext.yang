@@ -1,0 +1,11 @@
+module sdcio-ext {
+  yang-version 1.1;
+  namespace "urn:sdcio-ext";
+  prefix "sdcio-ext";
+
+  extension mutate-on-write {
+    description
+      "Marks a leaf or leaf-list whose non-empty readback value on the
+       same path after a write may differ from the literal value written.";
+  }
+}

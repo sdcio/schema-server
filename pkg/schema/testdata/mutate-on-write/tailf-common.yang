@@ -1,0 +1,33 @@
+module tailf-common {
+  yang-version 1;
+  namespace "http://tail-f.com/yang/common";
+  prefix "tailf";
+
+  extension suppress-echo {
+    argument "value";
+  }
+
+  typedef md5-digest-string {
+    type string;
+  }
+
+  typedef sha-256-digest-string {
+    type string;
+  }
+
+  typedef sha-512-digest-string {
+    type string;
+  }
+
+  typedef des3-cbc-encrypted-string {
+    type string;
+  }
+
+  typedef aes-cfb-128-encrypted-string {
+    type string;
+  }
+
+  typedef aes-256-cfb-128-encrypted-string {
+    type string;
+  }
+}

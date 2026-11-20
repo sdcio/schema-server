@@ -1,0 +1,9 @@
+module iana-crypt-hash {
+  yang-version 1;
+  namespace "urn:ietf:params:xml:ns:yang:iana-crypt-hash";
+  prefix "ianach";
+
+  typedef crypt-hash {
+    type string;
+  }
+}
