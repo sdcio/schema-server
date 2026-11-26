@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"github.com/openconfig/goyang/pkg/yang"
+	"github.com/sdcio/logger"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/sdcio/schema-server/pkg/utils"
 )
@@ -106,7 +106,7 @@ func relativeToAbsPathKeys(p *sdcpb.Path, e *yang.Entry) {
 			// split path into its elements
 			keyPath, err := utils.ParsePath(strings.TrimSpace(v))
 			if err != nil {
-				log.Error(err)
+				logger.DefaultLogger.Error(err, "failed to parse leafref path")
 			}
 
 			// current yang entry will be forwarded via key path elements

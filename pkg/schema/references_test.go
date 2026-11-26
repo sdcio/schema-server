@@ -15,6 +15,7 @@
 package schema
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -151,7 +152,7 @@ func TestBuildReferences_ErrorWrapsPathContext(t *testing.T) {
 		Excludes:    []string{},
 	}
 
-	_, err := NewSchema(cfg)
+	_, err := NewSchema(context.Background(), cfg)
 	if err == nil {
 		t.Fatal("NewSchema() expected an error for an unresolvable leafref, got nil")
 	}
@@ -229,7 +230,7 @@ func TestToSchemaType_LeafrefReturnsType(t *testing.T) {
 		Excludes:    []string{},
 	}
 
-	sc, err := NewSchema(cfg)
+	sc, err := NewSchema(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("NewSchema() returned unexpected error: %v", err)
 	}

@@ -18,6 +18,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/sdcio/logger"
+	"github.com/sdcio/schema-server/pkg/logbootstrap"
 	sdcpb "github.com/sdcio/sdc-protos/sdcpb"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -42,8 +44,16 @@ var addr string
 var format string
 var maxRcvMsg int
 var timeout time.Duration
+var cliDebug bool
+var cliTrace bool
 
 func init() {
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
+		log, _ := logbootstrap.Init(cliDebug, cliTrace)
+		cmd.SetContext(logger.IntoContext(cmd.Context(), log))
+	}
+	rootCmd.PersistentFlags().BoolVarP(&cliDebug, "debug", "d", false, "set log level to DEBUG")
+	rootCmd.PersistentFlags().BoolVarP(&cliTrace, "trace", "t", false, "set log level to TRACE")
 	rootCmd.PersistentFlags().StringVarP(&addr, "address", "a", "localhost:55000", "schema server address")
 	rootCmd.PersistentFlags().StringVar(&schemaName, "name", "", "schema name")
 	rootCmd.PersistentFlags().StringVar(&schemaVendor, "vendor", "", "schema vendor")

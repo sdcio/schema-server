@@ -15,6 +15,7 @@
 package schema
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"testing"
@@ -455,7 +456,7 @@ func TestSchema_BuildPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sc, err := NewSchema(tt.fields.config)
+			sc, err := NewSchema(context.Background(), tt.fields.config)
 			if err != nil {
 				t.Errorf("%s: failed to create schema", err)
 			}
@@ -538,7 +539,7 @@ func TestSchema_LeafrefUnderChoiceCase(t *testing.T) {
 		Excludes:    []string{},
 	}
 
-	sc, err := NewSchema(cfg)
+	sc, err := NewSchema(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("NewSchema() returned unexpected error: %v", err)
 	}
@@ -566,7 +567,7 @@ func TestSchema_LeafrefAnnotationOnTarget(t *testing.T) {
 		Excludes:    []string{},
 	}
 
-	sc, err := NewSchema(cfg)
+	sc, err := NewSchema(context.Background(), cfg)
 	if err != nil {
 		t.Fatalf("NewSchema() returned unexpected error: %v", err)
 	}
