@@ -1,0 +1,9 @@
+module openconfig-types {
+  yang-version 1;
+  namespace "http://openconfig.net/yang/openconfig-types";
+  prefix "oc-types";
+
+  typedef routing-password {
+    type string;
+  }
+}

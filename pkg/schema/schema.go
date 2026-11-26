@@ -70,6 +70,7 @@ func NewSchema(sCfg *config.SchemaConfig) (*Schema, error) {
 		e := yang.ToEntry(m)
 		sc.root.Dir[e.Name] = e
 	}
+	sc.buildDeviateAnnotations()
 	log.Infof("schema %s building references", sc.UniqueName(""))
 	err = sc.buildReferencesAnnotation()
 	if err != nil {

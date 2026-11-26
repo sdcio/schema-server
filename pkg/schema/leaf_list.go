@@ -34,6 +34,7 @@ func (sc *Schema) leafListFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafL
 		IsUserOrdered:  false,
 		IfFeature:      getIfFeature(e),
 		Defaults:       e.DefaultValues(),
+		MutateOnWrite:  sc.isMutateOnWrite(e),
 	}
 	if withDesc {
 		ll.Description = e.Description

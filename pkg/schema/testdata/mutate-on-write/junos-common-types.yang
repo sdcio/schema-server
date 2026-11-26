@@ -1,0 +1,11 @@
+module junos-common-types {
+  yang-version 1;
+  namespace "http://yang.juniper.net/junos/common/types";
+  prefix "jt";
+
+  extension unreadable;
+
+  typedef unreadable {
+    type string;
+  }
+}

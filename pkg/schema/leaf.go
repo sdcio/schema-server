@@ -41,6 +41,7 @@ func (sc *Schema) leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchem
 		IsState:        isState(e),
 		Reference:      make([]string, 0),
 		IfFeature:      getIfFeature(e),
+		MutateOnWrite:  sc.isMutateOnWrite(e),
 	}
 
 	if withDesc {
@@ -73,6 +74,10 @@ func (sc *Schema) leafFromYEntry(e *yang.Entry, withDesc bool) (*sdcpb.LeafSchem
 
 // toSchemaType e is the yang.Entry that the type belongs to, yt is the actual type.
 func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaLeafType, error) {
+	return sc.toSchemaTypeSeen(e, yt, make(map[*yang.Entry]bool))
+}
+
+func (sc *Schema) toSchemaTypeSeen(e *yang.Entry, yt *yang.YangType, seenLeafrefs map[*yang.Entry]bool) (*sdcpb.SchemaLeafType, error) {
 	var enumNames []string
 	if yt.Enum != nil {
 		enumNames = yt.Enum.Names()
@@ -123,7 +128,7 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 	switch yt.Kind {
 	case yang.Yunion:
 		for _, ytt := range yt.Type {
-			schem, err := sc.toSchemaType(e, ytt)
+			schem, err := sc.toSchemaTypeSeen(e, ytt, seenLeafrefs)
 			if err != nil {
 				return nil, err
 			}
@@ -142,15 +147,20 @@ func (sc *Schema) toSchemaType(e *yang.Entry, yt *yang.YangType) (*sdcpb.SchemaL
 			slt.ModulePrefixMap[identity.Name] = identityRoot.NName()
 		}
 	case yang.Yleafref:
-		var err error
+		if e != nil {
+			seenLeafrefs[e] = true
+			defer delete(seenLeafrefs, e)
+		}
 		normalizedPath := normalizePath(yt.Path, e)
 		leafSchemaEntry, err := sc.GetEntry(normalizedPath)
 		if err != nil {
 			return nil, fmt.Errorf("leafref %q normalized to %v: %w", yt.Path, normalizedPath, err)
 		}
-		slt.LeafrefTargetType, err = sc.toSchemaType(leafSchemaEntry, leafSchemaEntry.Type)
-		if err != nil {
-			return nil, err
+		if !seenLeafrefs[leafSchemaEntry] {
+			slt.LeafrefTargetType, err = sc.toSchemaTypeSeen(leafSchemaEntry, leafSchemaEntry.Type, seenLeafrefs)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 

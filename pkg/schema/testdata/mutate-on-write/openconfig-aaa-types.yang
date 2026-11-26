@@ -1,0 +1,9 @@
+module openconfig-aaa-types {
+  yang-version 1;
+  namespace "http://openconfig.net/yang/aaa/types";
+  prefix "oc-aaa-types";
+
+  typedef crypt-password-type {
+    type string;
+  }
+}

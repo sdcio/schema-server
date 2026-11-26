@@ -1,0 +1,29 @@
+module Cisco-IOS-XR-types {
+  yang-version 1;
+  namespace "http://cisco.com/ns/yang/cisco-xr-types";
+  prefix "xr";
+
+  typedef Proprietary-password {
+    type string;
+  }
+
+  typedef Md5-password {
+    type string;
+  }
+
+  typedef Type6-password {
+    type string;
+  }
+
+  typedef Type8-password {
+    type string;
+  }
+
+  typedef Type9-password {
+    type string;
+  }
+
+  typedef Type10-password {
+    type string;
+  }
+}
