@@ -4,8 +4,6 @@ go 1.25.0
 
 replace github.com/openconfig/goyang v1.6.0 => github.com/sdcio/goyang v1.6.2-2
 
-replace github.com/sdcio/sdc-protos => ../sdc-protos
-
 require (
 	github.com/dgraph-io/badger/v4 v4.9.6
 	github.com/gorilla/mux v1.8.1
@@ -16,7 +14,7 @@ require (
 	github.com/olekukonko/tablewriter v1.1.4
 	github.com/openconfig/goyang v1.6.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/sdcio/sdc-protos v0.0.55
+	github.com/sdcio/sdc-protos v0.0.57-0.20261120130348-fe084f2516a8
 	github.com/sirupsen/logrus v1.10.0
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.83.2
